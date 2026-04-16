@@ -44,7 +44,7 @@ const RE_ANALYSIS   = /explai|analys|analyz|understand|how does|what is|why |arc
 const RE_WRITING    = /implement|write|create|add|build|generat|develop|code/i
 const RE_DEBUG      = /fix|bug|error|crash|broken|debug|issue|problem|fail/i
 
-const RE_BASH_OPS   = /docker|kubectl|helm|wrangler|terraform|npm run (build|deploy|start|prod)|yarn build|gh pr|git push|git tag|release/i
+const RE_BASH_OPS   = /docker|kubectl|helm|wrangler deploy|terraform|npm run (deploy|prod)|yarn deploy|gh pr create|gh release/i
 const RE_BASH_QUAL  = /jest|vitest|npm test|yarn test|eslint|prettier|lint|coverage/i
 
 // ── Main classifier ────────────────────────────────────────────────────────────
