@@ -76,7 +76,7 @@ export const handleIngest: Handler = async (req, env) => {
 
   const body = await req.json() as { records?: TokenRecord[]; sessions?: SessionMeta[] }
   const rawRecords = body.records ?? []
-  const rawSessions = body.sessions ?? []
+  const rawSessions = (body.sessions ?? []).slice(0, 1000)  // defensive cap
 
   // Sanitize records — drop anything with invalid counts or IDs
   const records = rawRecords
@@ -90,8 +90,10 @@ export const handleIngest: Handler = async (req, env) => {
     )
     .map(r => ({
       ...r,
-      // Clamp request_category to valid set; unknown values stored as '' (inherits session category)
-      request_category: VALID_CATEGORIES.has(r.request_category ?? '') ? r.request_category : '',
+      // Clamp request_category to valid set; unknown/missing values stored as '' (inherits session category)
+      request_category: (typeof r.request_category === 'string' && VALID_CATEGORIES.has(r.request_category))
+        ? r.request_category
+        : '',
     }))
 
   // Sanitize sessions — clamp to valid categories

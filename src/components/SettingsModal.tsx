@@ -55,15 +55,18 @@ export default function SettingsModal({ onClose }: Props) {
     setDeleting(true)
     setError('')
     try {
-      // 1. Delete all data from D1 (Worker)
-      await deleteAccount()
-      // 2. Delete the Firebase Auth user
+      // 1. Delete the Firebase Auth user FIRST — fails fast if re-auth is needed.
+      //    This prevents the worse failure mode of D1 data being erased while the
+      //    Firebase account survives (user could log back in to an empty dashboard).
       await deleteUser(user)
-      // Auth listener in App.tsx will detect sign-out and redirect to AuthScreen
+      // 2. D1 data only deleted after Firebase confirms success.
+      //    If this fails the Firebase account is gone so the data is orphaned but
+      //    inaccessible — a hygiene issue, not a security or data-loss issue.
+      await deleteAccount()
+      // Auth listener in App.tsx will detect the Firebase sign-out and redirect.
     } catch (e) {
       setDeleting(false)
       setDeleteConfirm(false)
-      // Firebase requires recent login for deleteUser — surface that clearly
       const msg = e instanceof Error ? e.message : 'Failed to delete account'
       if (msg.includes('requires-recent-login')) {
         setError('Please sign out and sign back in before deleting your account.')

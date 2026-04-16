@@ -98,11 +98,9 @@ interface SessionAccum {
   firstMessageAt?: string
   lastMessageAt?: string
   firstMessage?: string
-  requestIds: Set<string>
   toolCounts: ToolCounts
   bashCommands: string[]
   requestCount: number
-  records: TokenRecord[]
 }
 
 interface TokenRecord {
@@ -163,11 +161,9 @@ async function parseFile(
         model: '',
         entrypoint: d.entrypoint ?? '',
         gitBranch: d.gitBranch ?? '',
-        requestIds: new Set(),
         toolCounts: { edit: 0, bash: 0, read: 0, todo: 0, agent: 0, total: 0 },
         bashCommands: [],
         requestCount: 0,
-        records: [],
       })
     }
     const sess = sessions.get(sid)!
@@ -346,7 +342,6 @@ async function main() {
             allSessions.set(k, v)
           } else {
             // Merge — backfill missing fields, accumulate counts
-            existing.records.push(...v.records)
             existing.requestCount += v.requestCount
             existing.toolCounts.edit  += v.toolCounts.edit
             existing.toolCounts.bash  += v.toolCounts.bash

@@ -188,10 +188,6 @@ function buildWhere(f: UsageFilters): { clause: string; bindings: unknown[] } {
 
 export async function queryDailyUsage(db: D1Database, f: UsageFilters) {
   const { clause, bindings } = buildWhere(f)
-  const join = f.category && f.category !== 'all'
-    ? 'LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id'
-    : 'LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id'
-
   const result = await db.prepare(
     `SELECT tu.date,
             SUM(tu.input_tokens)   AS input,

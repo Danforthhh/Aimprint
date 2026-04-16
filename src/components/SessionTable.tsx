@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Session, Category } from '../types'
 import { ALL_CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS } from '../types'
 import { updateSessionCategory } from '../services/api'
@@ -27,6 +27,18 @@ function CategoryBadge({ category, source, sessionId, onChange }: {
   onChange: (c: Category) => void
 }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
 
   async function pick(c: Category) {
     setOpen(false)
@@ -38,7 +50,7 @@ function CategoryBadge({ category, source, sessionId, onChange }: {
   const color = CATEGORY_COLORS[category] ?? '#6b7280'
 
   return (
-    <div className="relative inline-block">
+    <div ref={ref} className="relative inline-block">
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors hover:opacity-80"
