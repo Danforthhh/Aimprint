@@ -24,6 +24,17 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   other:         'Other',
 }
 
+export const CATEGORY_DESCRIPTIONS: Record<Category, { summary: string; examples: string }> = {
+  code_writing:  { summary: 'Implementing features, writing new code',           examples: 'e.g. adding a new endpoint, building a component, writing a migration' },
+  code_process:  { summary: 'CI/CD, deployments, Docker, builds, ops',           examples: 'e.g. wrangler deploy, docker build, npm run build, git push to prod' },
+  quality:       { summary: 'Tests, linting, code review, security',             examples: 'e.g. writing Jest tests, fixing ESLint errors, reviewing a PR' },
+  deep_analysis: { summary: 'Codebase exploration, architecture review',         examples: 'e.g. reading many files, understanding a codebase, architecture planning' },
+  refinement:    { summary: 'Refactoring, simplifying, cleaning up',             examples: 'e.g. extracting functions, renaming variables, removing dead code' },
+  planning:      { summary: 'PRDs, tickets, strategy, roadmaps',                 examples: 'e.g. writing a spec, creating ClickUp tickets, drafting a roadmap' },
+  random:        { summary: 'Quick questions, short sessions (< 3 min)',         examples: 'e.g. "how does X work?", one-off lookups, quick fixes' },
+  other:         { summary: 'Doesn\'t fit a clear pattern',                      examples: 'Mixed or unclear work type' },
+}
+
 export const CATEGORY_COLORS: Record<Category, string> = {
   code_writing:  '#3b82f6',  // blue-500
   code_process:  '#f97316',  // orange-500

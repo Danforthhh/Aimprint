@@ -8,6 +8,8 @@ interface Props {
   title: string
   data: DimItem[]
   color?: string
+  subtitle?: string
+  emptyState?: React.ReactNode
 }
 
 const PALETTE = ['#3b82f6','#22c55e','#f97316','#a855f7','#14b8a6','#eab308','#ef4444','#6b7280']
@@ -18,13 +20,13 @@ function fmtTokens(n: number): string {
   return String(n)
 }
 
-export default function DimChart({ title, data, color }: Props) {
+export default function DimChart({ title, data, color, subtitle, emptyState }: Props) {
   const sorted = [...data].sort((a, b) => b.tokens - a.tokens).slice(0, 12)
 
   if (sorted.length === 0) {
     return (
-      <div className="card flex items-center justify-center h-40">
-        <p className="text-sm text-gray-600">No data</p>
+      <div className="card flex flex-col items-center justify-center h-40 gap-2 text-center px-6">
+        {emptyState ?? <p className="text-sm text-gray-600">No data</p>}
       </div>
     )
   }
@@ -33,7 +35,10 @@ export default function DimChart({ title, data, color }: Props) {
 
   return (
     <div className="card">
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">{title}</h3>
+      <div className="flex items-baseline gap-2 mb-4">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">{title}</h3>
+        {subtitle && <span className="text-xs text-gray-600">{subtitle}</span>}
+      </div>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={sorted} layout="vertical" margin={{ left: 0, right: 10, top: 0, bottom: 0 }}>
           <XAxis

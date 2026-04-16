@@ -176,10 +176,27 @@ export default function App() {
 
         {/* Charts row 3 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DimChart title="By project"  data={projectDim} color="#3b82f6" />
-          <DimChart title="By model"    data={modelDim}   color="#22c55e" />
-          <DimChart title="By machine"  data={machineDim} color="#f97316" />
-          <DimChart title="By ticket"   data={ticketDim}  color="#a855f7" />
+          <DimChart
+            title="By project"
+            data={projectDim}
+            color="#3b82f6"
+            subtitle="(basename of working directory)"
+          />
+          <DimChart title="By model"   data={modelDim}   color="#22c55e" />
+          <DimChart title="By machine" data={machineDim} color="#f97316" />
+          <DimChart
+            title="By ticket"
+            data={ticketDim}
+            color="#a855f7"
+            emptyState={
+              <div>
+                <p className="text-sm text-gray-500 mb-1">No ticket data yet</p>
+                <p className="text-xs text-gray-600">Tickets are auto-detected from git branch names.</p>
+                <p className="text-xs text-gray-600 mt-1">Name your branches like:</p>
+                <p className="text-xs text-gray-500 font-mono mt-0.5">fix-PROTOP-1523-auth-bug</p>
+              </div>
+            }
+          />
         </div>
 
         {/* Sessions */}
