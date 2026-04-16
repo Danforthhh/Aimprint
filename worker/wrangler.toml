@@ -8,8 +8,8 @@ binding = "DB"
 database_name = "aimprint-db"
 database_id = "eff012c3-1eb2-4526-8de2-4a6f3235cdab"
 
-# Secrets are set via: wrangler secret put WORKER_TOKEN
+# Secrets are set via: wrangler secret put FIREBASE_PROJECT_ID
 # To deploy:
 # 1. wrangler d1 create aimprint-db  (copy the database_id here)
-# 2. Set your secret: wrangler secret put WORKER_TOKEN
+# 2. Set your secret: wrangler secret put FIREBASE_PROJECT_ID
 # 3. wrangler deploy --config worker/wrangler.toml

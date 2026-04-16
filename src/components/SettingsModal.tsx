@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { signOut } from 'firebase/auth'
+import { signOut, deleteUser } from 'firebase/auth'
 import { auth } from '../services/firebase'
-import { createSyncToken, listSyncTokens, deleteSyncToken } from '../services/api'
+import { createSyncToken, listSyncTokens, deleteSyncToken, deleteAccount } from '../services/api'
 
 interface Props {
   onClose: () => void
@@ -10,11 +10,14 @@ interface Props {
 interface TokenRow { token: string; label: string; created_at: string }
 
 export default function SettingsModal({ onClose }: Props) {
-  const [tokens, setTokens]   = useState<TokenRow[]>([])
-  const [label, setLabel]     = useState('New machine')
+  const [tokens, setTokens]     = useState<TokenRow[]>([])
+  const [label, setLabel]       = useState('New machine')
   const [newToken, setNewToken] = useState('')
-  const [copied, setCopied]   = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [copied, setCopied]     = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const user = auth.currentUser
 
   useEffect(() => {
@@ -23,20 +26,51 @@ export default function SettingsModal({ onClose }: Props) {
 
   async function generate() {
     setLoading(true)
+    setError('')
     try {
       const result = await createSyncToken(label)
       setNewToken(result.token)
       const updated = await listSyncTokens()
       setTokens(updated.tokens)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to generate token')
     } finally {
       setLoading(false)
     }
   }
 
   async function remove(tokenPrefix: string) {
-    await deleteSyncToken(tokenPrefix)
-    const updated = await listSyncTokens()
-    setTokens(updated.tokens)
+    setError('')
+    try {
+      await deleteSyncToken(tokenPrefix)
+      const updated = await listSyncTokens()
+      setTokens(updated.tokens)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to revoke token')
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!user) return
+    setDeleting(true)
+    setError('')
+    try {
+      // 1. Delete all data from D1 (Worker)
+      await deleteAccount()
+      // 2. Delete the Firebase Auth user
+      await deleteUser(user)
+      // Auth listener in App.tsx will detect sign-out and redirect to AuthScreen
+    } catch (e) {
+      setDeleting(false)
+      setDeleteConfirm(false)
+      // Firebase requires recent login for deleteUser — surface that clearly
+      const msg = e instanceof Error ? e.message : 'Failed to delete account'
+      if (msg.includes('requires-recent-login')) {
+        setError('Please sign out and sign back in before deleting your account.')
+      } else {
+        setError(msg)
+      }
+    }
   }
 
   function copy() {
@@ -54,13 +88,20 @@ export default function SettingsModal({ onClose }: Props) {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Global error banner */}
+          {error && (
+            <div className="bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
           {/* Account */}
           <div>
             <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Account</h3>
             <p className="text-sm text-gray-300 mb-3">{user?.email}</p>
             <button
               onClick={() => signOut(auth)}
-              className="text-sm text-red-400 hover:text-red-300"
+              className="text-sm text-gray-400 hover:text-white"
             >
               Sign out
             </button>
@@ -113,13 +154,58 @@ export default function SettingsModal({ onClose }: Props) {
                       <p className="text-xs text-gray-500 font-mono">{t.token}…</p>
                     </div>
                     <button
-                      onClick={() => remove(t.token.replace('...', ''))}
+                      onClick={() => remove(t.token.slice(0, 8))}
                       className="text-xs text-red-400 hover:text-red-300 ml-3"
                     >
                       Revoke
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Danger zone */}
+          <div className="border-t border-gray-800 pt-6">
+            <h3 className="text-sm font-medium text-red-500 uppercase tracking-wider mb-3">Danger zone</h3>
+            {!deleteConfirm ? (
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-300 font-medium">Delete account</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Permanently deletes your account, all sync tokens, and all usage data. This cannot be undone.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="shrink-0 text-sm text-red-400 hover:text-red-300 border border-red-800 hover:border-red-600 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  Delete account
+                </button>
+              </div>
+            ) : (
+              <div className="bg-red-900/10 border border-red-800 rounded-lg p-4 space-y-3">
+                <p className="text-sm text-red-300 font-medium">Are you sure?</p>
+                <p className="text-xs text-red-400">
+                  This will permanently delete <strong>{user?.email}</strong> and all associated data.
+                  Your sync agent will stop working immediately.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleting}
+                    className="bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition-colors"
+                  >
+                    {deleting ? 'Deleting…' : 'Yes, delete everything'}
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(false)}
+                    disabled={deleting}
+                    className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 rounded-lg px-4 py-1.5 text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -3,7 +3,7 @@ import {
   handleUsage, handleCategories, handleSidechain, handleBreakdown,
   handleSessions, handleUpdateCategory, handleFilters,
   handleCreateSyncToken, handleListSyncTokens, handleDeleteSyncToken,
-  handleExportCsv,
+  handleExportCsv, handleDeleteAccount,
 } from './routes'
 
 interface Env {
@@ -81,6 +81,8 @@ export default {
         // ── Sync token management ──────────────────────────────────────────
         else if (method === 'POST'   && path === '/api/sync-tokens') response = await handleCreateSyncToken(request, env)
         else if (method === 'GET'    && path === '/api/sync-tokens') response = await handleListSyncTokens(request, env)
+        // ── Account management ─────────────────────────────────────────────
+        else if (method === 'DELETE' && path === '/api/account')     response = await handleDeleteAccount(request, env)
         else {
           const deleteTokenMatch = path.match(/^\/api\/sync-tokens\/([^/]+)$/)
           if (method === 'DELETE' && deleteTokenMatch) {

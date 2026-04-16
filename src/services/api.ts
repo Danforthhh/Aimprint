@@ -104,9 +104,16 @@ export async function downloadCsv(f: FilterState): Promise<void> {
   if (!res.ok) throw new Error('CSV export failed')
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'aimprint-export.csv'
-  a.click()
-  URL.revokeObjectURL(url)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'aimprint-export.csv'
+    a.click()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+export async function deleteAccount(): Promise<void> {
+  await apiFetch('/api/account', { method: 'DELETE' })
 }

@@ -5,6 +5,22 @@ import {
 } from 'firebase/auth'
 import { auth } from '../services/firebase'
 
+function friendlyAuthError(msg: string): string {
+  if (msg.includes('wrong-password') || msg.includes('invalid-credential') || msg.includes('INVALID_LOGIN_CREDENTIALS'))
+    return 'Invalid email or password.'
+  if (msg.includes('user-not-found'))
+    return 'No account found with that email.'
+  if (msg.includes('email-already-in-use'))
+    return 'An account with this email already exists.'
+  if (msg.includes('weak-password'))
+    return 'Password must be at least 6 characters.'
+  if (msg.includes('too-many-requests'))
+    return 'Too many failed attempts. Please try again later.'
+  if (msg.includes('network-request-failed'))
+    return 'Network error. Please check your connection.'
+  return 'Authentication failed. Please try again.'
+}
+
 export default function AuthScreen() {
   const [mode, setMode]       = useState<'login' | 'register'>('login')
   const [email, setEmail]     = useState('')
@@ -23,7 +39,7 @@ export default function AuthScreen() {
         await createUserWithEmailAndPassword(auth, email, password)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      setError(friendlyAuthError(err instanceof Error ? err.message : ''))
     } finally {
       setLoading(false)
     }

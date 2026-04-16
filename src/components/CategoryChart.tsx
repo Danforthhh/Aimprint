@@ -60,7 +60,8 @@ export default function CategoryChart({ data }: Props) {
           <Tooltip
             formatter={(v: number) => fmtTokens(v)}
             contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-            labelStyle={{ color: '#9ca3af' }}
+            labelStyle={{ color: '#e5e7eb' }}
+            itemStyle={{ color: '#9ca3af' }}
           />
           <Bar dataKey="tokens" radius={[0,3,3,0]}>
             {sorted.map(item => (

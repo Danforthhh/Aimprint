@@ -53,12 +53,16 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
     const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', cryptoKey, sig, data)
     if (!valid) return null
 
-    // Decode and validate payload claims
+    // Decode and validate payload claims per Firebase token spec:
+    // https://firebase.google.com/docs/auth/admin/verify-id-tokens#verify_id_tokens_using_a_third-party_jwt_library
     const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')))
     const now = Math.floor(Date.now() / 1000)
-    if (payload.exp < now) return null
-    if (payload.aud !== projectId) return null
-    if (payload.iss !== `https://securetoken.google.com/${projectId}`) return null
+    if (payload.exp < now)                               return null  // expired
+    if (typeof payload.iat !== 'number' || payload.iat > now) return null  // issued in the future
+    if (typeof payload.auth_time !== 'number' || payload.auth_time > now) return null  // auth in future
+    if (payload.aud !== projectId)                       return null  // wrong audience
+    if (payload.iss !== `https://securetoken.google.com/${projectId}`) return null  // wrong issuer
+    if (!payload.sub || typeof payload.sub !== 'string') return null  // missing subject (uid)
 
     return { uid: payload.sub, email: payload.email ?? '' }
   } catch {

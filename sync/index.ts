@@ -195,22 +195,27 @@ async function parseFile(
       }
     }
 
-    // Count tool calls (session-level totals) + extract per-turn tool info
-    if (d.type === 'tool_use' || (d.type === 'assistant' && d.message?.content)) {
-      const content = d.message?.content ?? []
-      for (const block of content) {
+    // Count tool calls (session-level totals) + collect per-turn tool info in one pass.
+    // For assistant turns, this also feeds the per-request classifier below.
+    const turnToolNames: string[] = []
+    const turnBashCmds: string[] = []
+    if (d.type === 'assistant' && d.message?.content) {
+      for (const block of d.message.content) {
         if (block.type !== 'tool_use') continue
         const name = block.name ?? ''
+        // Session-level accumulator
         sess.toolCounts.total++
         if (/^(Edit|Write|NotebookEdit)$/.test(name))  sess.toolCounts.edit++
         else if (name === 'Bash') {
           sess.toolCounts.bash++
           const cmd = String((block.input as Record<string, unknown>)?.['command'] ?? '')
-          if (cmd) sess.bashCommands.push(cmd.slice(0, 200))
+          if (cmd) { sess.bashCommands.push(cmd.slice(0, 200)); turnBashCmds.push(cmd.slice(0, 200)) }
         }
         else if (/^(Read|Grep|Glob)$/.test(name))      sess.toolCounts.read++
         else if (name === 'TodoWrite')                  sess.toolCounts.todo++
         else if (name === 'Agent')                      sess.toolCounts.agent++
+        // Per-turn list (reused by classifyRequest below)
+        turnToolNames.push(name)
       }
     }
 
@@ -233,18 +238,7 @@ async function parseFile(
         const ts      = d.timestamp ?? new Date().toISOString()
 
         if (!records.has(d.requestId)) {
-          // Per-request classification: extract tool calls for THIS turn only
-          const turnContent = d.message?.content ?? []
-          const turnToolNames: string[] = []
-          const turnBashCmds: string[] = []
-          for (const block of turnContent) {
-            if (block.type !== 'tool_use') continue
-            turnToolNames.push(block.name ?? '')
-            if (block.name === 'Bash') {
-              const cmd = String((block.input as Record<string, unknown>)?.['command'] ?? '')
-              if (cmd) turnBashCmds.push(cmd.slice(0, 200))
-            }
-          }
+          // turnToolNames + turnBashCmds already populated by the single pass above
           const reqCategory = classifyRequest({
             toolNames: turnToolNames,
             bashCommands: turnBashCmds,

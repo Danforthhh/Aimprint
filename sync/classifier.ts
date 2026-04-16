@@ -67,7 +67,7 @@ export function classifyRequest(input: {
   toolNames: string[]
   bashCommands: string[]
   userMessage?: string
-}): string {
+}): Category | '' {
   const { toolNames, bashCommands, userMessage = '' } = input
 
   // Strong: bash command signals

@@ -176,6 +176,9 @@ function buildWhere(f: UsageFilters): { clause: string; bindings: unknown[] } {
   if (f.machine && f.machine !== 'all') { conditions.push('tu.machine = ?'); bindings.push(f.machine) }
   if (f.ticket  && f.ticket  !== 'all') { conditions.push('tu.ticket = ?');  bindings.push(f.ticket) }
   if (f.category && f.category !== 'all') {
+    // Note: category filter uses session-level classification (sm.category), not per-request
+    // (tu.request_category). This is intentional for /api/usage and /api/sessions — filtering
+    // by session type. The category chart itself uses queryRequestCategories for accuracy.
     conditions.push('sm.category = ?')
     bindings.push(f.category)
   }
@@ -219,22 +222,6 @@ export async function queryTotals(db: D1Database, f: UsageFilters) {
      WHERE ${clause}`
   ).bind(...bindings).first()
   return row
-}
-
-export async function queryCategories(db: D1Database, f: UsageFilters) {
-  const { clause, bindings } = buildWhere(f)
-  const result = await db.prepare(
-    `SELECT COALESCE(sm.category, 'other') AS category,
-            COUNT(DISTINCT tu.session_id)  AS sessions,
-            SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
-            SUM(tu.cost_usd) AS cost_usd
-     FROM token_usage tu
-     LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
-     WHERE ${clause}
-     GROUP BY COALESCE(sm.category, 'other')
-     ORDER BY tokens DESC`
-  ).bind(...bindings).all()
-  return result.results
 }
 
 /**
@@ -343,4 +330,19 @@ export async function queryTickets(db: D1Database, userId: string) {
     `SELECT DISTINCT ticket AS val FROM token_usage WHERE user_id = ? AND ticket IS NOT NULL ORDER BY ticket`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
+}
+
+// ─── Account deletion ─────────────────────────────────────────────────────────
+
+/**
+ * Permanently deletes all data for a user: token_usage, session_meta, sync_tokens, and the
+ * users row. Runs as a D1 batch so all deletes are applied atomically.
+ */
+export async function deleteUserAccount(db: D1Database, userId: string): Promise<void> {
+  await db.batch([
+    db.prepare('DELETE FROM token_usage  WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM session_meta WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM sync_tokens  WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM users        WHERE user_id = ?').bind(userId),
+  ])
 }

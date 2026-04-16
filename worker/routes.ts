@@ -4,6 +4,7 @@ import {
   insertTokenRecords, upsertSessionMeta, updateSessionCategory,
   queryDailyUsage, queryTotals, queryRequestCategories, querySubagent,
   queryByDimension, querySessions, queryDistinct, queryTickets,
+  deleteUserAccount,
   type D1Database, type TokenRecord, type SessionMeta,
 } from './db'
 
@@ -77,15 +78,21 @@ export const handleIngest: Handler = async (req, env) => {
   const rawRecords = body.records ?? []
   const rawSessions = body.sessions ?? []
 
-  // Sanitize records — drop anything with invalid counts
-  const records = rawRecords.filter(r =>
-    typeof r.request_id === 'string' && r.request_id.length > 0 &&
-    typeof r.session_id === 'string' &&
-    typeof r.input_tokens  === 'number' && r.input_tokens  >= 0 &&
-    typeof r.output_tokens === 'number' && r.output_tokens >= 0 &&
-    typeof r.cache_read    === 'number' && r.cache_read    >= 0 &&
-    typeof r.cache_creation === 'number' && r.cache_creation >= 0
-  )
+  // Sanitize records — drop anything with invalid counts or IDs
+  const records = rawRecords
+    .filter(r =>
+      typeof r.request_id === 'string' && r.request_id.length > 0 && r.request_id.length <= 128 &&
+      typeof r.session_id === 'string' && r.session_id.length > 0 &&
+      typeof r.input_tokens  === 'number' && r.input_tokens  >= 0 &&
+      typeof r.output_tokens === 'number' && r.output_tokens >= 0 &&
+      typeof r.cache_read    === 'number' && r.cache_read    >= 0 &&
+      typeof r.cache_creation === 'number' && r.cache_creation >= 0
+    )
+    .map(r => ({
+      ...r,
+      // Clamp request_category to valid set; unknown values stored as '' (inherits session category)
+      request_category: VALID_CATEGORIES.has(r.request_category ?? '') ? r.request_category : '',
+    }))
 
   // Sanitize sessions — clamp to valid categories
   const sessions = rawSessions.map(s => ({
@@ -258,6 +265,22 @@ export const handleDeleteSyncToken: Handler = async (req, env, params) => {
   if (!match) return err('Token not found', 404)
 
   await deleteSyncToken(env.DB, user.uid, match.token)
+  return json({ ok: true })
+}
+
+// ─── DELETE /api/account ──────────────────────────────────────────────────────
+
+/**
+ * Permanently deletes all data for the authenticated user from D1.
+ * The client (SettingsModal) is responsible for then calling Firebase deleteUser()
+ * to remove the Auth identity. Two-step ensures D1 data is always cleaned up
+ * even if the Firebase call fails on the client side.
+ */
+export const handleDeleteAccount: Handler = async (req, env) => {
+  const user = await requireFirebaseAuth(req, env)
+  if (user instanceof Response) return user
+
+  await deleteUserAccount(env.DB, user.uid)
   return json({ ok: true })
 }
 

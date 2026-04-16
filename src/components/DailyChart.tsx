@@ -34,7 +34,8 @@ export default function DailyChart({ data }: Props) {
           <Tooltip
             formatter={(value: number, name: string) => [fmtTokens(value), name]}
             contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-            labelStyle={{ color: '#9ca3af' }}
+            labelStyle={{ color: '#e5e7eb' }}
+            itemStyle={{ color: '#9ca3af' }}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af' }} />
           <Bar dataKey="input"         name="Input"         stackId="a" fill="#3b82f6" radius={[0,0,0,0]} />
