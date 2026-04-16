@@ -39,7 +39,12 @@ function Card({ label, value, sub, color = 'text-white', badge }: CardProps) {
 
 export default function SummaryCards({ totals, totalsPrev }: Props) {
   const total = (totals.input ?? 0) + (totals.output ?? 0) + (totals.cache_read ?? 0) + (totals.cache_creation ?? 0)
-  const totalPrev = (totalsPrev?.input ?? 0) + (totalsPrev?.output ?? 0) + (totalsPrev?.cache_read ?? 0) + (totalsPrev?.cache_creation ?? 0)
+  const totalDouble = (totalsPrev?.input ?? 0) + (totalsPrev?.output ?? 0) + (totalsPrev?.cache_read ?? 0) + (totalsPrev?.cache_creation ?? 0)
+
+  // Previous period = double window minus current window (isolates the period before)
+  const prevTokens   = Math.max(0, totalDouble - total)
+  const prevSessions = Math.max(0, (totalsPrev?.sessions ?? 0) - (totals.sessions ?? 0))
+  const prevCost     = Math.max(0, (totalsPrev?.cost_usd ?? 0) - (totals.cost_usd ?? 0))
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -48,20 +53,20 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
         value={fmtTokens(total)}
         sub={`${fmtTokens(totals.input ?? 0)} input · ${fmtTokens(totals.output ?? 0)} output`}
         color="text-blue-400"
-        badge={<ComparisonBadge current={total} previous={totalPrev / 2} />}
+        badge={<ComparisonBadge current={total} previous={prevTokens} />}
       />
       <Card
         label="Sessions"
         value={String(totals.sessions ?? 0)}
         sub={`${totals.requests ?? 0} API requests`}
-        badge={<ComparisonBadge current={totals.sessions ?? 0} previous={(totalsPrev?.sessions ?? 0) / 2} />}
+        badge={<ComparisonBadge current={totals.sessions ?? 0} previous={prevSessions} />}
       />
       <Card
         label="~API cost"
         value={fmtCost(totals.cost_usd ?? 0)}
         sub="Subscription billing differs"
         color="text-green-400"
-        badge={<ComparisonBadge current={totals.cost_usd ?? 0} previous={(totalsPrev?.cost_usd ?? 0) / 2} />}
+        badge={<ComparisonBadge current={totals.cost_usd ?? 0} previous={prevCost} />}
       />
       <Card
         label="Cache efficiency"
