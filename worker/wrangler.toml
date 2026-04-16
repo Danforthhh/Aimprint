@@ -1,0 +1,17 @@
+name = "aimprint"
+main = "index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aimprint-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+WORKER_TOKEN = "REPLACE_WITH_YOUR_SECRET_TOKEN"
+
+# To deploy:
+# 1. wrangler d1 create aimprint-db  (copy the database_id here)
+# 2. Set your secret: wrangler secret put WORKER_TOKEN
+# 3. wrangler deploy --config worker/wrangler.toml

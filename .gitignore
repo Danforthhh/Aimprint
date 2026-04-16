@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.local
+sync/.env
+.wrangler/
+graphify-out/
+*.tsbuildinfo

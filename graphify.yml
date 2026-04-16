@@ -1,0 +1,20 @@
+name: aimprint
+version: 1
+
+scan:
+  - src/**/*.{ts,tsx}
+  - worker/**/*.ts
+  - sync/**/*.ts
+
+exclude:
+  - node_modules/**
+  - dist/**
+  - graphify-out/**
+  - "**/*.d.ts"
+
+output: graphify-out/
+
+settings:
+  max_depth: 8
+  include_types: true
+  community_detection: true
