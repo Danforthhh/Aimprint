@@ -38,7 +38,7 @@ export default function CategoryChart({ data }: Props) {
                   <span className="text-gray-600 text-xs">?</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span>{item.sessions} sessions</span>
+                  <span>{item.requests ?? item.sessions} requests</span>
                   <span className="text-gray-300 font-medium">{fmtTokens(item.tokens)}</span>
                   <span>{pct.toFixed(0)}%</span>
                 </div>

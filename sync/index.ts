@@ -14,7 +14,7 @@ import os from 'node:os'
 import readline from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import { loadCursors, saveCursors } from './cursor'
-import { classify, type ClassifyInput, type ToolCounts } from './classifier'
+import { classify, classifyRequest, type ClassifyInput, type ToolCounts } from './classifier'
 
 // ── Load env ──────────────────────────────────────────────────────────────────
 
@@ -123,6 +123,7 @@ interface TokenRecord {
   cache_creation: number
   is_sidechain: number
   cost_usd: number
+  request_category: string  // '' = inherit session category at query time
 }
 
 // ── Parse a single JSONL file ─────────────────────────────────────────────────
@@ -141,6 +142,8 @@ async function parseFile(
   const records = new Map<string, TokenRecord>()
   const sessions = new Map<string, SessionAccum>()
   let newOffset = offset
+  // Track last user message per session for per-request classification context
+  const lastUserMessage = new Map<string, string>()
 
   for await (const line of rl) {
     newOffset += Buffer.byteLength(line + '\n')
@@ -174,20 +177,25 @@ async function parseFile(
     if (d.entrypoint) sess.entrypoint = d.entrypoint
     if (d.gitBranch)  sess.gitBranch  = d.gitBranch
 
-    // Capture first user message text
-    if (d.type === 'user' && !sess.firstMessage && d.message?.role === 'user') {
+    // Capture first user message text + track last user message for per-request context
+    if (d.type === 'user' && d.message?.role === 'user') {
       const content = d.message.content
+      let msgText: string | undefined
       if (Array.isArray(content)) {
         const textBlock = content.find((b: Record<string, unknown>) => b['type'] === 'text')
         if (textBlock && 'text' in textBlock) {
-          sess.firstMessage = String((textBlock as Record<string, unknown>)['text']).slice(0, 500)
+          msgText = String((textBlock as Record<string, unknown>)['text']).slice(0, 500)
         }
       } else if (typeof content === 'string') {
-        sess.firstMessage = (content as string).slice(0, 500)
+        msgText = (content as string).slice(0, 500)
+      }
+      if (msgText) {
+        if (!sess.firstMessage) sess.firstMessage = msgText
+        lastUserMessage.set(sid, msgText)
       }
     }
 
-    // Count tool calls
+    // Count tool calls (session-level totals) + extract per-turn tool info
     if (d.type === 'tool_use' || (d.type === 'assistant' && d.message?.content)) {
       const content = d.message?.content ?? []
       for (const block of content) {
@@ -225,6 +233,24 @@ async function parseFile(
         const ts      = d.timestamp ?? new Date().toISOString()
 
         if (!records.has(d.requestId)) {
+          // Per-request classification: extract tool calls for THIS turn only
+          const turnContent = d.message?.content ?? []
+          const turnToolNames: string[] = []
+          const turnBashCmds: string[] = []
+          for (const block of turnContent) {
+            if (block.type !== 'tool_use') continue
+            turnToolNames.push(block.name ?? '')
+            if (block.name === 'Bash') {
+              const cmd = String((block.input as Record<string, unknown>)?.['command'] ?? '')
+              if (cmd) turnBashCmds.push(cmd.slice(0, 200))
+            }
+          }
+          const reqCategory = classifyRequest({
+            toolNames: turnToolNames,
+            bashCommands: turnBashCmds,
+            userMessage: lastUserMessage.get(sid) ?? '',
+          })
+
           records.set(d.requestId, {
             request_id:    d.requestId,
             session_id:    sid,
@@ -243,6 +269,7 @@ async function parseFile(
             cache_creation: cacheC,
             is_sidechain:  d.isSidechain ? 1 : 0,
             cost_usd:      estimateCost(sess.model, input, output, cacheR, cacheC),
+            request_category: reqCategory,
           })
         }
       }

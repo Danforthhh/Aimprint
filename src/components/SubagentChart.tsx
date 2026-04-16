@@ -36,6 +36,8 @@ export default function SubagentChart({ data }: Props) {
           <Tooltip
             formatter={(v: number) => fmtTokens(v)}
             contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+            labelStyle={{ color: '#e5e7eb' }}
+            itemStyle={{ color: '#9ca3af' }}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af' }} />
         </PieChart>

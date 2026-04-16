@@ -2,7 +2,7 @@ import { verifyFirebaseToken } from './auth'
 import {
   upsertUser, lookupSyncToken, createSyncToken, listSyncTokens, deleteSyncToken,
   insertTokenRecords, upsertSessionMeta, updateSessionCategory,
-  queryDailyUsage, queryTotals, queryCategories, querySubagent,
+  queryDailyUsage, queryTotals, queryRequestCategories, querySubagent,
   queryByDimension, querySessions, queryDistinct, queryTickets,
   type D1Database, type TokenRecord, type SessionMeta,
 } from './db'
@@ -132,7 +132,7 @@ export const handleCategories: Handler = async (req, env) => {
   const url = new URL(req.url)
   const days = clampDays(url.searchParams.get('days') ?? '30')
   const f = { userId: user.uid, days }
-  const categories = await queryCategories(env.DB, f)
+  const categories = await queryRequestCategories(env.DB, f)
   return json({ categories })
 }
 

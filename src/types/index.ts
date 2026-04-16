@@ -69,7 +69,8 @@ export interface Totals {
 
 export interface CategoryItem {
   category: Category
-  sessions: number
+  sessions: number   // number of distinct sessions (legacy, still returned by some queries)
+  requests?: number  // number of individual requests (per-request classification)
   tokens: number
   cost_usd: number
 }

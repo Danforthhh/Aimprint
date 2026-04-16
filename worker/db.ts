@@ -75,6 +75,7 @@ export interface TokenRecord {
   cache_creation: number
   is_sidechain: number
   cost_usd: number
+  request_category?: string  // '' = inherit session category at query time
 }
 
 export async function insertTokenRecords(
@@ -89,14 +90,16 @@ export async function insertTokenRecords(
       `INSERT OR IGNORE INTO token_usage
         (request_id, user_id, session_id, timestamp, date, machine, project, cwd,
          model, entrypoint, git_branch, ticket,
-         input_tokens, output_tokens, cache_read, cache_creation, is_sidechain, cost_usd)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         input_tokens, output_tokens, cache_read, cache_creation, is_sidechain, cost_usd,
+         request_category)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       r.request_id, userId, r.session_id, r.timestamp, r.date,
       r.machine, r.project, r.cwd ?? null, r.model, r.entrypoint ?? null,
       r.git_branch ?? null, r.ticket ?? null,
       r.input_tokens, r.output_tokens, r.cache_read, r.cache_creation,
       r.is_sidechain, r.cost_usd,
+      r.request_category ?? '',
     )
   )
 
@@ -229,6 +232,30 @@ export async function queryCategories(db: D1Database, f: UsageFilters) {
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
      WHERE ${clause}
      GROUP BY COALESCE(sm.category, 'other')
+     ORDER BY tokens DESC`
+  ).bind(...bindings).all()
+  return result.results
+}
+
+/**
+ * Per-request category breakdown.
+ * Hybrid resolution: when request_category is '' (weak signal), falls back
+ * to the session's category from session_meta, then to 'other'.
+ * This preserves contextual categories (refinement, deep_analysis, planning)
+ * while giving accurate per-request attribution for strong signals.
+ */
+export async function queryRequestCategories(db: D1Database, f: UsageFilters) {
+  const { clause, bindings } = buildWhere(f)
+  const result = await db.prepare(
+    `SELECT COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other') AS category,
+            COUNT(*) AS requests,
+            COUNT(DISTINCT tu.session_id) AS sessions,
+            SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
+            SUM(tu.cost_usd) AS cost_usd
+     FROM token_usage tu
+     LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
+     WHERE ${clause}
+     GROUP BY COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other')
      ORDER BY tokens DESC`
   ).bind(...bindings).all()
   return result.results

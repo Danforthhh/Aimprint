@@ -47,6 +47,55 @@ const RE_DEBUG      = /fix|bug|error|crash|broken|debug|issue|problem|fail/i
 const RE_BASH_OPS   = /docker|kubectl|helm|wrangler deploy|terraform|npm run (deploy|prod)|yarn deploy|gh pr create|gh release/i
 const RE_BASH_QUAL  = /jest|vitest|npm test|yarn test|eslint|prettier|lint|coverage/i
 
+// ── Per-request classifier ─────────────────────────────────────────────────────
+
+/**
+ * Classify a single assistant turn based on the tools it called.
+ * Returns '' (empty) when no strong signal exists — the caller should store
+ * '' and resolve it to the session category at query time (hybrid approach).
+ *
+ * Strong signals (always returns a non-empty category):
+ *   - Bash with OPS/QUAL commands
+ *   - Edit / Write / NotebookEdit (code_writing)
+ *   - TodoWrite (planning)
+ *
+ * Weak signals (fall back to '' so session context is preserved):
+ *   - Read / Grep / Glob only
+ *   - Pure conversation (no tools)
+ */
+export function classifyRequest(input: {
+  toolNames: string[]
+  bashCommands: string[]
+  userMessage?: string
+}): string {
+  const { toolNames, bashCommands, userMessage = '' } = input
+
+  // Strong: bash command signals
+  if (bashCommands.some(c => RE_BASH_OPS.test(c)))  return 'code_process'
+  if (bashCommands.some(c => RE_BASH_QUAL.test(c))) return 'quality'
+
+  // Strong: editing / planning tools
+  if (toolNames.includes('TodoWrite')) return 'planning'
+  if (toolNames.some(t => ['Edit', 'Write', 'NotebookEdit'].includes(t))) return 'code_writing'
+
+  // Weak: read-only tools — inherit session category at query time
+  if (toolNames.length > 0 && toolNames.every(t => ['Read', 'Grep', 'Glob'].includes(t))) return ''
+
+  // No tools at all (pure conversation) — fall back to message keywords
+  if (toolNames.length === 0 && userMessage) {
+    if (RE_OPS.test(userMessage))        return 'code_process'
+    if (RE_QUALITY.test(userMessage))    return 'quality'
+    if (RE_PLANNING.test(userMessage))   return 'planning'
+    if (RE_REFINEMENT.test(userMessage)) return 'refinement'
+    if (RE_ANALYSIS.test(userMessage))   return 'deep_analysis'
+    if (RE_WRITING.test(userMessage))    return 'code_writing'
+    if (RE_DEBUG.test(userMessage))      return 'code_writing'
+  }
+
+  // Weak signal — inherit session category
+  return ''
+}
+
 // ── Main classifier ────────────────────────────────────────────────────────────
 
 export function classify(input: ClassifyInput): Category {
@@ -56,9 +105,15 @@ export function classify(input: ClassifyInput): Category {
   if (requestCount <= 3 && toolCounts.total <= 2 && durationMinutes < 3) return 'random'
 
   // Bash command pattern analysis
-  const bashAll = bashCommands.join(' ')
-  const bashHasOps  = RE_BASH_OPS.test(bashAll)
-  const bashHasQual = RE_BASH_QUAL.test(bashAll)
+  const opsCount  = bashCommands.filter(c => RE_BASH_OPS.test(c)).length
+  const qualCount = bashCommands.filter(c => RE_BASH_QUAL.test(c)).length
+  const totalBash = bashCommands.length || 1
+
+  // code_process only wins if OPS commands are a significant share of bash activity
+  // (prevents 1 deploy at end of a coding session from tagging the whole session)
+  const opsRatio  = opsCount / totalBash
+  const bashHasOps  = opsCount >= 2 || (opsCount >= 1 && opsRatio >= 0.3)
+  const bashHasQual = qualCount >= 1
 
   // Score signals
   const signals = {
