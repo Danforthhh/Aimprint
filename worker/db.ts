@@ -249,17 +249,26 @@ export async function querySubagent(db: D1Database, f: UsageFilters) {
   return result.results
 }
 
+const DIM_COLUMNS: Record<string, string> = {
+  project: 'tu.project',
+  model:   'tu.model',
+  machine: 'tu.machine',
+  ticket:  'tu.ticket',
+}
+
 export async function queryByDimension(db: D1Database, f: UsageFilters, dim: 'project' | 'model' | 'machine' | 'ticket') {
+  const col = DIM_COLUMNS[dim]
+  if (!col) return []
   const { clause, bindings } = buildWhere(f)
   const result = await db.prepare(
-    `SELECT tu.${dim} AS label,
+    `SELECT ${col} AS label,
             COUNT(DISTINCT tu.session_id) AS sessions,
             SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
             SUM(tu.cost_usd) AS cost_usd
      FROM token_usage tu
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
-     WHERE ${clause} AND tu.${dim} IS NOT NULL AND tu.${dim} != ''
-     GROUP BY tu.${dim}
+     WHERE ${clause} AND ${col} IS NOT NULL AND ${col} != ''
+     GROUP BY ${col}
      ORDER BY tokens DESC
      LIMIT 50`
   ).bind(...bindings).all()

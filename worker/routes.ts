@@ -14,13 +14,28 @@ interface Env {
 
 type Handler = (req: Request, env: Env, params?: Record<string, string>) => Promise<Response>
 
+// days=0 means "all time"; positive values are clamped to 1–3650
+function clampDays(raw: string): number {
+  const n = parseInt(raw)
+  if (isNaN(n) || n <= 0) return 0
+  return Math.min(n, 3650)
+}
+
+function clampLimit(raw: string, def = 50): number {
+  const n = parseInt(raw)
+  if (isNaN(n) || n <= 0) return def
+  return Math.min(n, 500)
+}
+
+const VALID_CATEGORIES = new Set([
+  'code_writing', 'code_process', 'quality', 'deep_analysis',
+  'refinement', 'planning', 'random', 'other',
+])
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
+    headers: { 'Content-Type': 'application/json' },
   })
 }
 
@@ -59,8 +74,24 @@ export const handleIngest: Handler = async (req, env) => {
   const userId = userIdOrErr
 
   const body = await req.json() as { records?: TokenRecord[]; sessions?: SessionMeta[] }
-  const records = body.records ?? []
-  const sessions = body.sessions ?? []
+  const rawRecords = body.records ?? []
+  const rawSessions = body.sessions ?? []
+
+  // Sanitize records — drop anything with invalid counts
+  const records = rawRecords.filter(r =>
+    typeof r.request_id === 'string' && r.request_id.length > 0 &&
+    typeof r.session_id === 'string' &&
+    typeof r.input_tokens  === 'number' && r.input_tokens  >= 0 &&
+    typeof r.output_tokens === 'number' && r.output_tokens >= 0 &&
+    typeof r.cache_read    === 'number' && r.cache_read    >= 0 &&
+    typeof r.cache_creation === 'number' && r.cache_creation >= 0
+  )
+
+  // Sanitize sessions — clamp to valid categories
+  const sessions = rawSessions.map(s => ({
+    ...s,
+    category: VALID_CATEGORIES.has(s.category) ? s.category : 'other',
+  }))
 
   const { inserted, skipped } = await insertTokenRecords(env.DB, userId, records)
   await upsertSessionMeta(env.DB, userId, sessions)
@@ -75,7 +106,7 @@ export const handleUsage: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days   = parseInt(url.searchParams.get('days') ?? '30')
+  const days   = clampDays(url.searchParams.get('days') ?? '30')
   const project  = url.searchParams.get('project') ?? 'all'
   const model    = url.searchParams.get('model') ?? 'all'
   const machine  = url.searchParams.get('machine') ?? 'all'
@@ -86,7 +117,7 @@ export const handleUsage: Handler = async (req, env) => {
   const [daily, totals] = await Promise.all([queryDailyUsage(env.DB, f), queryTotals(env.DB, f)])
 
   // Previous period for comparison: fetch totals for double window
-  const prevF = { ...f, days: days * 2 }
+  const prevF = { ...f, days: days === 0 ? 0 : days * 2 }
   const totalsPrev = await queryTotals(env.DB, prevF)
 
   return json({ daily, totals, totalsPrev })
@@ -99,7 +130,7 @@ export const handleCategories: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = parseInt(url.searchParams.get('days') ?? '30')
+  const days = clampDays(url.searchParams.get('days') ?? '30')
   const f = { userId: user.uid, days }
   const categories = await queryCategories(env.DB, f)
   return json({ categories })
@@ -112,7 +143,7 @@ export const handleSidechain: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = parseInt(url.searchParams.get('days') ?? '30')
+  const days = clampDays(url.searchParams.get('days') ?? '30')
   const f = { userId: user.uid, days }
   const data = await querySubagent(env.DB, f)
   return json({ data })
@@ -128,7 +159,7 @@ export const handleBreakdown: Handler = async (req, env, params) => {
   if (!['project', 'model', 'machine', 'ticket'].includes(dim)) return err('Invalid dimension')
 
   const url = new URL(req.url)
-  const days = parseInt(url.searchParams.get('days') ?? '30')
+  const days = clampDays(url.searchParams.get('days') ?? '30')
   const f = { userId: user.uid, days }
 
   if (dim === 'ticket') {
@@ -146,14 +177,14 @@ export const handleSessions: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days     = parseInt(url.searchParams.get('days') ?? '30')
+  const days     = clampDays(url.searchParams.get('days') ?? '30')
   const project  = url.searchParams.get('project') ?? 'all'
   const model    = url.searchParams.get('model') ?? 'all'
   const machine  = url.searchParams.get('machine') ?? 'all'
   const category = url.searchParams.get('category') ?? 'all'
   const ticket   = url.searchParams.get('ticket') ?? 'all'
-  const limit    = parseInt(url.searchParams.get('limit') ?? '50')
-  const offset   = parseInt(url.searchParams.get('offset') ?? '0')
+  const limit    = clampLimit(url.searchParams.get('limit') ?? '50')
+  const offset   = Math.max(0, parseInt(url.searchParams.get('offset') ?? '0') || 0)
 
   const f = { userId: user.uid, days, project, model, machine, category, ticket }
   const sessions = await querySessions(env.DB, f, limit, offset)
@@ -171,6 +202,7 @@ export const handleUpdateCategory: Handler = async (req, env, params) => {
 
   const body = await req.json() as { category?: string }
   if (!body.category) return err('Missing category')
+  if (!VALID_CATEGORIES.has(body.category)) return err('Invalid category')
 
   await updateSessionCategory(env.DB, user.uid, sessionId, body.category)
   return json({ ok: true })
@@ -236,10 +268,10 @@ export const handleExportCsv: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = parseInt(url.searchParams.get('days') ?? '30')
+  const days = clampDays(url.searchParams.get('days') ?? '30')
   const f = { userId: user.uid, days }
 
-  const sessions = await querySessions(env.DB, f, 1000, 0)
+  const sessions = await querySessions(env.DB, f, 10000, 0)
 
   const headers = ['session_id', 'date', 'machine', 'project', 'model', 'category', 'ticket', 'tokens', 'cost_usd']
   const rows = (sessions as Record<string, unknown>[]).map(s =>
@@ -251,7 +283,6 @@ export const handleExportCsv: Handler = async (req, env) => {
     headers: {
       'Content-Type': 'text/csv',
       'Content-Disposition': 'attachment; filename="aimprint-export.csv"',
-      'Access-Control-Allow-Origin': '*',
     },
   })
 }

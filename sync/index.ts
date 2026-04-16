@@ -12,12 +12,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import readline from 'node:readline'
+import { fileURLToPath } from 'node:url'
 import { loadCursors, saveCursors } from './cursor'
 import { classify, type ClassifyInput, type ToolCounts } from './classifier'
 
 // ── Load env ──────────────────────────────────────────────────────────────────
 
-const envFile = path.join(path.dirname(new URL(import.meta.url).pathname), '.env')
+const envFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '.env')
 if (fs.existsSync(envFile)) {
   for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
     const m = line.match(/^([A-Z_]+)=(.+)$/)
@@ -253,18 +254,32 @@ async function parseFile(
 
 // ── POST to worker ────────────────────────────────────────────────────────────
 
-async function postBatch(records: TokenRecord[], sessions: SessionMeta[]): Promise<void> {
-  const res = await fetch(`${WORKER_URL}/ingest`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Sync-Token': SYNC_TOKEN! },
-    body: JSON.stringify({ records, sessions }),
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Ingest failed ${res.status}: ${text}`)
+async function postBatch(records: TokenRecord[], sessions: SessionMeta[], attempt = 1): Promise<void> {
+  try {
+    const res = await fetch(`${WORKER_URL}/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Sync-Token': SYNC_TOKEN! },
+      body: JSON.stringify({ records, sessions }),
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      // Retry on server errors (5xx), not client errors (4xx)
+      if (res.status >= 500 && attempt < 3) {
+        await new Promise(r => setTimeout(r, 1000 * attempt))
+        return postBatch(records, sessions, attempt + 1)
+      }
+      throw new Error(`Ingest failed ${res.status}: ${text}`)
+    }
+    const result = await res.json() as { inserted: number; skipped: number }
+    console.log(`  → inserted: ${result.inserted}, skipped: ${result.skipped}`)
+  } catch (e) {
+    if (attempt < 3 && e instanceof TypeError) {
+      // Network error — retry with backoff
+      await new Promise(r => setTimeout(r, 1000 * attempt))
+      return postBatch(records, sessions, attempt + 1)
+    }
+    throw e
   }
-  const result = await res.json() as { inserted: number; skipped: number }
-  console.log(`  → inserted: ${result.inserted}, skipped: ${result.skipped}`)
 }
 
 interface SessionMeta {
@@ -309,7 +324,7 @@ async function main() {
           if (!existing) {
             allSessions.set(k, v)
           } else {
-            // Merge
+            // Merge — backfill missing fields, accumulate counts
             existing.records.push(...v.records)
             existing.requestCount += v.requestCount
             existing.toolCounts.edit  += v.toolCounts.edit
@@ -320,6 +335,15 @@ async function main() {
             existing.toolCounts.total += v.toolCounts.total
             existing.bashCommands.push(...v.bashCommands)
             if (!existing.firstMessage && v.firstMessage) existing.firstMessage = v.firstMessage
+            if (!existing.model && v.model)               existing.model = v.model
+            if (!existing.cwd && v.cwd)                   existing.cwd = v.cwd
+            if (!existing.gitBranch && v.gitBranch)       existing.gitBranch = v.gitBranch
+            if (!existing.entrypoint && v.entrypoint)     existing.entrypoint = v.entrypoint
+            // Keep earliest firstMessageAt, latest lastMessageAt
+            if (v.firstMessageAt && (!existing.firstMessageAt || v.firstMessageAt < existing.firstMessageAt))
+              existing.firstMessageAt = v.firstMessageAt
+            if (v.lastMessageAt && (!existing.lastMessageAt || v.lastMessageAt > existing.lastMessageAt))
+              existing.lastMessageAt = v.lastMessageAt
           }
         }
         cursors[filePath] = newOffset
@@ -342,7 +366,10 @@ async function main() {
   for (const [, sess] of allSessions) {
     const duration = (() => {
       if (!sess.firstMessageAt || !sess.lastMessageAt) return 0
-      return (new Date(sess.lastMessageAt).getTime() - new Date(sess.firstMessageAt).getTime()) / 60_000
+      const start = new Date(sess.firstMessageAt).getTime()
+      const end   = new Date(sess.lastMessageAt).getTime()
+      if (isNaN(start) || isNaN(end) || end < start) return 0
+      return (end - start) / 60_000
     })()
 
     const input: ClassifyInput = {
@@ -368,13 +395,13 @@ async function main() {
     })
   }
 
-  // Post in batches
+  // Post records in batches — always include full sessionMetas (upsert is idempotent)
   const records = Array.from(allRecords.values())
+  const totalBatches = Math.ceil(records.length / BATCH_SIZE)
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const batch = records.slice(i, i + BATCH_SIZE)
-    const sessionBatch = sessionMetas.slice(i, i + BATCH_SIZE)
-    console.log(`Posting batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(records.length / BATCH_SIZE)}...`)
-    await postBatch(batch, sessionBatch)
+    console.log(`Posting batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}...`)
+    await postBatch(batch, sessionMetas)
   }
 
   saveCursors(cursors)
