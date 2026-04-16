@@ -71,8 +71,8 @@ export default function App() {
     try {
       const [usage, cats, side, proj, mod, mach, tick, sess, fdata] = await Promise.all([
         fetchUsage(filters),
-        fetchCategories(filters.days),
-        fetchSidechain(filters.days),
+        fetchCategories(filters),
+        fetchSidechain(filters),
         fetchBreakdown('project', filters.days),
         fetchBreakdown('model',   filters.days),
         fetchBreakdown('machine', filters.days),

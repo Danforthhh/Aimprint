@@ -5,6 +5,7 @@ import type {
   Session, FiltersData, FilterState,
 } from '../types'
 
+
 const WORKER = import.meta.env['VITE_WORKER_URL'] ?? ''
 
 async function getToken(): Promise<string> {
@@ -52,12 +53,12 @@ export async function fetchUsage(f: FilterState): Promise<{
   return apiFetch(`/api/usage${qs(f)}`)
 }
 
-export async function fetchCategories(days: number): Promise<{ categories: CategoryItem[] }> {
-  return apiFetch(`/api/categories?days=${days}`)
+export async function fetchCategories(f: FilterState): Promise<{ categories: CategoryItem[] }> {
+  return apiFetch(`/api/categories${qs(f)}`)
 }
 
-export async function fetchSidechain(days: number): Promise<{ data: SubagentItem[] }> {
-  return apiFetch(`/api/sidechain?days=${days}`)
+export async function fetchSidechain(f: FilterState): Promise<{ data: SubagentItem[] }> {
+  return apiFetch(`/api/sidechain${qs(f)}`)
 }
 
 export async function fetchBreakdown(dim: string, days: number): Promise<{ data: DimItem[] }> {

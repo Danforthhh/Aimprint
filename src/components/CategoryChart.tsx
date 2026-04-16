@@ -3,14 +3,9 @@ import {
 } from 'recharts'
 import type { CategoryItem } from '../types'
 import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_DESCRIPTIONS } from '../types'
+import { fmtTokens } from '../utils/format'
 
 interface Props { data: CategoryItem[] }
-
-function fmtTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}k`
-  return String(n)
-}
 
 export default function CategoryChart({ data }: Props) {
   const total = data.reduce((s, d) => s + d.tokens, 0)
@@ -55,7 +50,7 @@ export default function CategoryChart({ data }: Props) {
       </div>
       <ResponsiveContainer width="100%" height={140}>
         <BarChart data={sorted} layout="vertical" margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-          <XAxis type="number" tickFormatter={fmtTokens} tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+          <XAxis type="number" tickFormatter={n => fmtTokens(n)} tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey="category" tickFormatter={c => CATEGORY_LABELS[c as keyof typeof CATEGORY_LABELS] ?? c} tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} width={90} />
           <Tooltip
             formatter={(v: number) => fmtTokens(v)}

@@ -139,8 +139,12 @@ export const handleCategories: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = clampDays(url.searchParams.get('days') ?? '30')
-  const f = { userId: user.uid, days }
+  const days    = clampDays(url.searchParams.get('days') ?? '30')
+  const project = url.searchParams.get('project') ?? 'all'
+  const model   = url.searchParams.get('model')   ?? 'all'
+  const machine = url.searchParams.get('machine') ?? 'all'
+  const ticket  = url.searchParams.get('ticket')  ?? 'all'
+  const f = { userId: user.uid, days, project, model, machine, ticket }
   const categories = await queryRequestCategories(env.DB, f)
   return json({ categories })
 }
@@ -152,8 +156,12 @@ export const handleSidechain: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = clampDays(url.searchParams.get('days') ?? '30')
-  const f = { userId: user.uid, days }
+  const days    = clampDays(url.searchParams.get('days') ?? '30')
+  const project = url.searchParams.get('project') ?? 'all'
+  const model   = url.searchParams.get('model')   ?? 'all'
+  const machine = url.searchParams.get('machine') ?? 'all'
+  const ticket  = url.searchParams.get('ticket')  ?? 'all'
+  const f = { userId: user.uid, days, project, model, machine, ticket }
   const data = await querySubagent(env.DB, f)
   return json({ data })
 }

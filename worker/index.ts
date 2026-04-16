@@ -5,13 +5,10 @@ import {
   handleCreateSyncToken, handleListSyncTokens, handleDeleteSyncToken,
   handleExportCsv, handleDeleteAccount,
 } from './routes'
+import type { D1Database } from './db'
 
 interface Env {
-  DB: {
-    prepare(query: string): { bind(...v: unknown[]): { run(): Promise<unknown>; first<T>(): Promise<T | null>; all<T>(): Promise<{ results: T[] }> } }
-    batch(stmts: unknown[]): Promise<{ meta: Record<string, unknown> }[]>
-    exec(q: string): Promise<unknown>
-  }
+  DB: D1Database
   FIREBASE_PROJECT_ID: string
 }
 

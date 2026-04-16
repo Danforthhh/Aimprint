@@ -2,23 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import type { Session, Category } from '../types'
 import { ALL_CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS } from '../types'
 import { updateSessionCategory } from '../services/api'
+import { fmtTokens, fmtCost } from '../utils/format'
 
 interface Props {
   sessions: Session[]
   onCategoryChanged: (sessionId: string, category: Category) => void
 }
 
-function fmtTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`
-  return String(n)
-}
-
-function fmtCost(usd: number): string {
-  if (!usd || usd === 0) return '—'
-  if (usd < 0.001) return '<$0.001'
-  return `$${usd.toFixed(3)}`
-}
 
 function CategoryBadge({ category, source, sessionId, onChange }: {
   category: Category
@@ -27,6 +17,7 @@ function CategoryBadge({ category, source, sessionId, onChange }: {
   onChange: (c: Category) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,17 +31,33 @@ function CategoryBadge({ category, source, sessionId, onChange }: {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  // Auto-clear save error after 3 s
+  useEffect(() => {
+    if (!saveError) return
+    const t = setTimeout(() => setSaveError(''), 3000)
+    return () => clearTimeout(t)
+  }, [saveError])
+
   async function pick(c: Category) {
     setOpen(false)
     if (c === category) return
-    await updateSessionCategory(sessionId, c)
-    onChange(c)
+    try {
+      await updateSessionCategory(sessionId, c)
+      onChange(c)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Failed to save')
+    }
   }
 
   const color = CATEGORY_COLORS[category] ?? '#6b7280'
 
   return (
     <div ref={ref} className="relative inline-block">
+      {saveError && (
+        <div className="absolute left-0 bottom-full mb-1 z-30 bg-red-900/90 border border-red-700 rounded px-2 py-1 text-xs text-red-300 whitespace-nowrap pointer-events-none">
+          {saveError}
+        </div>
+      )}
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors hover:opacity-80"
@@ -107,7 +114,7 @@ export default function SessionTable({ sessions, onCategoryChanged }: Props) {
                   />
                 </td>
                 <td className="py-2 pr-4 text-xs text-blue-400">{s.ticket ?? '—'}</td>
-                <td className="py-2 pr-4 font-medium text-blue-300 whitespace-nowrap">{fmtTokens(s.tokens)}</td>
+                <td className="py-2 pr-4 font-medium text-blue-300 whitespace-nowrap">{fmtTokens(s.tokens, true)}</td>
                 <td className="py-2 text-green-400 whitespace-nowrap">{fmtCost(s.cost_usd)}</td>
               </tr>
             ))}

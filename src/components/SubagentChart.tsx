@@ -1,13 +1,8 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import type { SubagentItem } from '../types'
+import { fmtTokens } from '../utils/format'
 
 interface Props { data: SubagentItem[] }
-
-function fmtTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}k`
-  return String(n)
-}
 
 export default function SubagentChart({ data }: Props) {
   const direct   = data.find(d => d.is_sidechain === 0)

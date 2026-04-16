@@ -1,15 +1,10 @@
 import type { Totals } from '../types'
 import ComparisonBadge from './ComparisonBadge'
+import { fmtTokens } from '../utils/format'
 
 interface Props {
   totals: Totals
   totalsPrev: Totals
-}
-
-function fmtTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`
-  return String(n)
 }
 
 function fmtCost(usd: number): string {
@@ -50,8 +45,8 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <Card
         label="Total tokens"
-        value={fmtTokens(total)}
-        sub={`${fmtTokens(totals.input ?? 0)} input · ${fmtTokens(totals.output ?? 0)} output`}
+        value={fmtTokens(total, true)}
+        sub={`${fmtTokens(totals.input ?? 0, true)} input · ${fmtTokens(totals.output ?? 0, true)} output`}
         color="text-blue-400"
         badge={<ComparisonBadge current={total} previous={prevTokens} />}
       />

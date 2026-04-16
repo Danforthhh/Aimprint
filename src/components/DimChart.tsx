@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 import type { DimItem } from '../types'
+import { fmtTokens } from '../utils/format'
 
 interface Props {
   title: string
@@ -13,12 +14,6 @@ interface Props {
 }
 
 const PALETTE = ['#3b82f6','#22c55e','#f97316','#a855f7','#14b8a6','#eab308','#ef4444','#6b7280']
-
-function fmtTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}k`
-  return String(n)
-}
 
 export default function DimChart({ title, data, color, subtitle, emptyState }: Props) {
   const sorted = [...data].sort((a, b) => b.tokens - a.tokens).slice(0, 12)
@@ -43,7 +38,7 @@ export default function DimChart({ title, data, color, subtitle, emptyState }: P
         <BarChart data={sorted} layout="vertical" margin={{ left: 0, right: 10, top: 0, bottom: 0 }}>
           <XAxis
             type="number"
-            tickFormatter={fmtTokens}
+            tickFormatter={n => fmtTokens(n)}
             tick={{ fill: '#6b7280', fontSize: 10 }}
             axisLine={false}
             tickLine={false}
