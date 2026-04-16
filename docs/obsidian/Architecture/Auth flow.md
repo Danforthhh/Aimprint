@@ -24,6 +24,15 @@ Firebase ID tokens are cached by the Firebase SDK and auto-refreshed. The Worker
 Sync tokens are long random strings (64 hex chars). They never expire unless manually revoked. The full token is shown only once at generation time; the list endpoint returns only the first 8 chars as a prefix for identification.
 
 ## Security properties
-- Cross-user data leakage: impossible via D1 queries (all filter by user_id)
-- Sync token compromise: revocable from dashboard
-- Firebase token replay: mitigated by 1h expiry and Google's JWKS rotation
+- **Cross-user data leakage:** impossible — all D1 queries filter by `user_id` derived from the verified Firebase token
+- **Sync token compromise:** revocable from dashboard (Settings → Revoke); token is deleted from D1
+- **Firebase token replay:** mitigated by 1h expiry and Google's automatic JWKS key rotation
+- **CORS:** Worker restricts `Access-Control-Allow-Origin` to `https://danforthhh.github.io` and `localhost` ports — enforced in `worker/index.ts` for all responses
+- **Input validation:** all query params bounded (`days` 0–3650, `limit` 1–500); all `/ingest` records sanitized (non-negative token counts, valid string IDs); categories validated against enum before DB write
+
+## JWT verification implementation note
+Firebase ID tokens are verified using the **JWK endpoint** (not X.509 PEM):
+```
+https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
+```
+This returns keys in JWK format directly importable by the Web Crypto API (`crypto.subtle.importKey('jwk', ...)`). The Cloudflare Worker caches this response for 1h.

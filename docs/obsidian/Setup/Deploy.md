@@ -39,20 +39,18 @@ npm run worker:deploy
 3. Get config from Project Settings → Web Apps
 4. Create `.env.local` from `.env.example` and fill in the values
 
-## 6. Add GitHub Secrets (for auto-deploy)
-In your GitHub repo → Settings → Secrets:
-- `VITE_WORKER_URL`
-- `VITE_FIREBASE_API_KEY`
-- `VITE_FIREBASE_AUTH_DOMAIN`
-- `VITE_FIREBASE_PROJECT_ID`
-- `VITE_FIREBASE_STORAGE_BUCKET`
-- `VITE_FIREBASE_MESSAGING_SENDER_ID`
-- `VITE_FIREBASE_APP_ID`
+## 6. Configure GitHub Pages
+In your GitHub repo → Settings → Pages → Source: **Deploy from a branch** → branch `gh-pages` → `/ (root)` → Save.
 
-Enable GitHub Pages in repo Settings → Pages → Source: GitHub Actions.
-
-## 7. Push to main
+## 7. Deploy the frontend
 ```bash
-git push origin main
-# GitHub Actions builds and deploys to GitHub Pages automatically
+npm run deploy
+# Builds with Vite and pushes dist/ to the gh-pages branch via gh-pages package
+# Site available at: https://<your-github-username>.github.io/Aimprint/
 ```
+
+Run `npm run deploy` after any frontend change to publish the updated dashboard.
+
+## Notes
+- The Firebase Web API key (VITE_FIREBASE_API_KEY) is embedded in the built JS — this is expected for Firebase web apps. Restrict it to your GitHub Pages domain in Google Cloud Console → APIs & Services → Credentials → HTTP referrers.
+- CORS on the Worker is restricted to `https://<your-github-username>.github.io` and `localhost` ports. If you deploy to a different domain, update `ALLOWED_ORIGINS` in `worker/index.ts` and redeploy.

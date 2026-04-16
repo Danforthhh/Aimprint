@@ -11,7 +11,7 @@
 - [x] CSV export
 - [x] Multi-user with sync tokens
 - [x] Onboarding tutorial in-app
-- [x] GitHub Actions auto-deploy
+- [x] Frontend deploy via `npm run deploy` (gh-pages → GitHub Pages)
 
 ## v2 (backlog)
 - [ ] Weekly email digest (Cloudflare Cron Trigger + Resend)

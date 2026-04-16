@@ -34,3 +34,13 @@ Single-page app. Firebase Auth for login. Fetches from Worker on filter change. 
 
 ## Auth flow
 See [[Auth flow]].
+
+## Security model
+- CORS restricted to `https://danforthhh.github.io` + localhost — configured in `worker/index.ts`, applied to all responses
+- Firebase JWT verified via Google JWK endpoint (Web Crypto API, no external libraries)
+- All D1 queries filter by `user_id` (derived from verified token — never from request params)
+- Sync tokens: 64-char random hex, stored in plain text in D1, revocable, never expire automatically
+- Input sanitization: `days` clamped to 0–3650, `limit` to 1–500, category validated against enum, ingest records validated before DB write
+
+## Dependency graph
+See `graphify-out/GRAPH_REPORT.md` for god nodes, community structure, and impact analysis.
