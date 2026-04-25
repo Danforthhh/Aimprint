@@ -13,17 +13,21 @@
     padding: 40px;
     min-height: 100vh;
   }
-  h1 {
-    font-size: 20px;
-    font-weight: 700;
-    color: #f8fafc;
-    margin-bottom: 6px;
+  h1 { font-size: 20px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+
+  /* LOCAL vs CLOUD legend */
+  .legend {
+    display: flex; gap: 24px; margin-bottom: 28px; align-items: center;
   }
-  .subtitle {
-    font-size: 13px;
-    color: #64748b;
-    margin-bottom: 36px;
+  .legend-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: #94a3b8;
   }
+  .legend-dot {
+    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  }
+
   .diagram-wrap {
     background: #1e293b;
     border: 1px solid #334155;
@@ -32,14 +36,55 @@
     display: flex;
     justify-content: center;
   }
-  .mermaid svg {
-    max-width: 100%;
+  .mermaid svg { max-width: 100%; }
+
+  /* Install table */
+  .install-table {
+    margin-top: 32px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
   }
+  .install-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .install-table thead tr { background: #0f172a; }
+  .install-table th {
+    text-align: left; padding: 12px 16px;
+    font-size: 11px; font-weight: 600; color: #64748b;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .install-table td { padding: 10px 16px; border-top: 1px solid #1e293b; color: #94a3b8; vertical-align: top; }
+  .install-table tr:hover td { background: #1a2234; }
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; margin-right: 6px;
+  }
+  .tag-local   { background: #1e3a5f; color: #60a5fa; }
+  .tag-cloud   { background: #0f2e20; color: #34d399; }
+  .tag-browser { background: #2d1040; color: #c084fc; }
+  code { color: #7dd3fc; font-family: 'Menlo', 'Consolas', monospace; }
+
+  .cards { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card {
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 12px; padding: 20px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; color: #64748b;
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px;
+  }
+  .card-body { font-size: 12px; color: #94a3b8; line-height: 1.8; }
 </style>
 </head>
 <body>
 <h1>Aimprint — Architecture</h1>
 <p class="subtitle">Claude Code token usage tracker · Cloudflare Worker + D1 · React dashboard</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div> Runs locally on each Claude Code machine</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> Managed cloud service (zero install)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Accessed via browser (any device)</div>
+</div>
 
 <div class="diagram-wrap">
 <div class="mermaid">
@@ -61,84 +106,133 @@
     'fontFamily': '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
   }
 }}%%
-graph TB
+graph LR
 
-  subgraph DEV ["  🖥️  Claude Code machine (1 per device)  "]
+  subgraph LOCAL ["  🖥️  LOCAL — install on each Claude Code machine  "]
     direction TB
-    CC["Claude Code\n─────────────\nCLI tool"]
-    JSONL["Session logs\n─────────────\n~/.claude/projects/\n*.jsonl"]
-    SYNC["Sync agent\n─────────────\nNode.js · sync/index.ts\nCursor-based, deduped"]
-    CLASS["Classifier\n─────────────\nsync/classifier.ts\nWork type detection"]
+    CC["⚙️ Claude Code\n─────────────\nCLI · npm install -g @anthropic-ai/claude-code"]
+    JSONL["📄 Session logs\n─────────────\n~/.claude/projects/*.jsonl\nauto-generated"]
+    SYNC["🔄 Sync agent\n─────────────\ngit clone Aimprint\nnpm install → npm run sync"]
+    CLASS["🏷️ Classifier\n─────────────\nsync/classifier.ts\nwork type detection"]
     CC -->|writes| JSONL
     JSONL -->|reads| SYNC
     SYNC --> CLASS
   end
 
-  subgraph CLOUD ["  ☁️  Cloudflare Edge  "]
+  subgraph CLOUD ["  ☁️  CLOUD — zero install, always on  "]
     direction TB
-    WORKER["Worker\n─────────────\nroutes.ts · auth.ts\nFirebase JWT verify"]
-    D1[("D1 SQLite\n─────────────\ntoken_usage\nsession_meta\nsync_tokens\nusers")]
-    WORKER <-->|queries| D1
+
+    subgraph CF ["Cloudflare"]
+      WORKER["🔧 Worker\n─────────────\nwrangler deploy\nroutes.ts · auth.ts"]
+      D1[("🗄️ D1 SQLite\n─────────────\ntoken_usage\nsession_meta\nsync_tokens · users")]
+      WORKER <-->|queries| D1
+    end
+
+    subgraph GH ["GitHub"]
+      GHA["⚙️ GitHub Actions\n─────────────\nauto on git push\nnpm ci → vite build"]
+      PAGES["🌐 GitHub Pages\n─────────────\ndanforthhh.github.io/Aimprint\nstatic hosting"]
+      GHA -->|deploys| PAGES
+    end
+
+    subgraph FB ["Firebase (Google)"]
+      AUTH["🔐 Firebase Auth\n─────────────\nGoogle SSO\nJWT issuer · verifier"]
+    end
   end
 
-  subgraph AUTH ["  🔐  Firebase  "]
-    FB["Firebase Auth\n─────────────\nGoogle SSO\nJWT issuer"]
+  subgraph BROWSER ["  🌐  BROWSER — any device, no install  "]
+    REACT["📊 React Dashboard\n─────────────\nVite · Tailwind · recharts\nserved from GitHub Pages"]
   end
 
-  subgraph CI ["  🚀  GitHub  "]
-    GHA["GitHub Actions\n─────────────\nnpm ci → vite build\non push to main"]
-    PAGES["GitHub Pages\n─────────────\ndanforthhh.github.io\n/Aimprint"]
-    GHA -->|deploys| PAGES
-  end
+  CLASS -->|"POST /ingest\nX-Sync-Token header"| WORKER
+  REACT -->|"GET /api/*\nAuthorization: Bearer JWT"| WORKER
+  WORKER -.->|verify JWT| AUTH
+  REACT <-->|"sign in"| AUTH
+  PAGES -.->|serves| REACT
 
-  subgraph BROWSER ["  🌐  Browser  "]
-    direction TB
-    REACT["React Dashboard\n─────────────\nVite · Tailwind CSS 4\nrecharts · Firebase SDK"]
-  end
-
-  CLASS -->|"POST /ingest\nX-Sync-Token"| WORKER
-  REACT -->|"GET /api/*\nBearer JWT"| WORKER
-  WORKER -.->|"verifies JWT"| FB
-  REACT <-->|"sign in / get token"| FB
-  PAGES -.->|"serves"| REACT
-
-  style DEV fill:#0f1e38,stroke:#1d4ed8,color:#93c5fd
-  style CLOUD fill:#0f2420,stroke:#059669,color:#6ee7b7
-  style AUTH fill:#2d1b4e,stroke:#7c3aed,color:#c4b5fd
-  style CI fill:#1a1a2e,stroke:#6366f1,color:#a5b4fc
-  style BROWSER fill:#1a1215,stroke:#db2777,color:#f9a8d4
+  style LOCAL fill:#0a1628,stroke:#1d4ed8,color:#93c5fd
+  style CLOUD fill:#081a10,stroke:#059669,color:#6ee7b7
+  style BROWSER fill:#160d2a,stroke:#7c3aed,color:#c4b5fd
+  style CF fill:#0f2420,stroke:#065f46,color:#6ee7b7
+  style GH fill:#111827,stroke:#374151,color:#9ca3af
+  style FB fill:#1a1040,stroke:#4c1d95,color:#c4b5fd
 </div>
 </div>
 
-<div style="margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
-    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Data flow — Sync</div>
-    <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
-      1. Claude Code writes JSONL after each request<br>
-      2. Sync agent polls on cursor offset (never re-reads)<br>
-      3. Classifier assigns work type (code_writing, planning…)<br>
-      4. Batch POST to Worker with sync token auth<br>
-      5. Worker deduplicates by <code style="color:#7dd3fc">request_id</code>
+<!-- What to install where -->
+<div class="install-table" style="margin-top: 32px;">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%">Component</th>
+        <th style="width:14%">Where</th>
+        <th style="width:32%">How to install</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong style="color:#e2e8f0">Claude Code</strong></td>
+        <td><span class="tag tag-local">Local</span></td>
+        <td><code>npm install -g @anthropic-ai/claude-code</code></td>
+        <td>One install per machine. Generates the JSONL session logs.</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#e2e8f0">Sync agent</strong></td>
+        <td><span class="tag tag-local">Local</span></td>
+        <td><code>git clone Aimprint && npm install</code><br><code>npm run sync</code> (cron or manual)</td>
+        <td>Reads <code>~/.claude/projects/*.jsonl</code>, classifies sessions, pushes to Worker. Needs a sync token from Settings.</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#e2e8f0">Cloudflare Worker + D1</strong></td>
+        <td><span class="tag tag-cloud">Cloud</span></td>
+        <td><code>npm run worker:deploy</code><br>(needs <code>CLOUDFLARE_API_TOKEN</code>)</td>
+        <td>Deploy once. Auto-scales. D1 is a managed SQLite — no server to maintain.</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#e2e8f0">Firebase Auth</strong></td>
+        <td><span class="tag tag-cloud">Cloud</span></td>
+        <td>Configured in Firebase Console once</td>
+        <td>Google SSO — no user management to maintain.</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#e2e8f0">React Dashboard</strong></td>
+        <td><span class="tag tag-cloud">Cloud</span> <span class="tag tag-browser">Browser</span></td>
+        <td><code>git push</code> → GitHub Actions builds + deploys automatically</td>
+        <td>Hosted on GitHub Pages. No server. Accessible from any browser.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-title">Data flow — Sync</div>
+    <div class="card-body">
+      1. Claude Code writes JSONL after each API request<br>
+      2. Sync agent reads from cursor offset (never re-reads)<br>
+      3. Classifier assigns work type (<code>code_writing</code>, <code>planning</code>…)<br>
+      4. Batch POST to Worker with <code>X-Sync-Token</code><br>
+      5. Worker deduplicates by <code>request_id</code>
     </div>
   </div>
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
-    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Data flow — Dashboard</div>
-    <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
+  <div class="card">
+    <div class="card-title">Data flow — Dashboard</div>
+    <div class="card-body">
       1. User opens app → Firebase Google SSO<br>
       2. Firebase issues JWT (ID token)<br>
-      3. React sends Bearer JWT on every API call<br>
-      4. Worker verifies JWT → queries D1 filtered by <code style="color:#7dd3fc">user_id</code><br>
+      3. React sends <code>Bearer JWT</code> on every API call<br>
+      4. Worker verifies JWT → queries D1 filtered by <code>user_id</code><br>
       5. Charts rendered client-side via recharts
     </div>
   </div>
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
-    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">D1 Schema</div>
-    <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
-      <code style="color:#7dd3fc">token_usage</code> — one row per API request<br>
-      <code style="color:#7dd3fc">session_meta</code> — category, first_message, tool_summary<br>
-      <code style="color:#7dd3fc">sync_tokens</code> — machine auth tokens<br>
-      <code style="color:#7dd3fc">users</code> — Firebase UID → email<br><br>
-      All queries filter <code style="color:#7dd3fc">user_id</code> (multi-tenant)
+  <div class="card">
+    <div class="card-title">D1 Schema</div>
+    <div class="card-body">
+      <code>token_usage</code> — one row per API request<br>
+      <code>session_meta</code> — category, first_message, tool_summary<br>
+      <code>sync_tokens</code> — one per machine, created in Settings<br>
+      <code>users</code> — Firebase UID → email mapping<br><br>
+      All queries filter by <code>user_id</code> (multi-tenant safe)
     </div>
   </div>
 </div>
