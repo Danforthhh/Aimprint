@@ -17,16 +17,18 @@ interface CardProps {
   label: string
   value: string
   sub?: string
+  sub2?: string
   color?: string
   badge?: React.ReactNode
 }
 
-function Card({ label, value, sub, color = 'text-white', badge }: CardProps) {
+function Card({ label, value, sub, sub2, color = 'text-white', badge }: CardProps) {
   return (
     <div className="card flex flex-col gap-1">
       <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       {sub && <p className="text-xs text-gray-500">{sub}</p>}
+      {sub2 && <p className="text-xs text-gray-600">{sub2}</p>}
       {badge}
     </div>
   )
@@ -45,6 +47,9 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
   const prevCost      = Math.max(0, (totalsPrev?.cost_usd ?? 0) - (totals.cost_usd ?? 0))
 
   const cacheEfficiency = grandTotal > 0 ? Math.round((cacheRead / grandTotal) * 100) : 0
+  // Sonnet: $3.00/M input - $0.30/M cache_read = $2.70/M saved per cache_read token (ref: worker/pricing.ts)
+  const CACHE_SAVINGS_PER_TOKEN = 2.70 / 1_000_000
+  const cacheSavingsUsd = cacheRead * CACHE_SAVINGS_PER_TOKEN
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -72,6 +77,7 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
         label="Cache efficiency"
         value={cacheEfficiency > 0 ? `${cacheEfficiency}%` : '—'}
         sub={`${fmtTokens(cacheRead, true)} tokens served from cache`}
+        sub2={cacheSavingsUsd > 0 ? `Est. ${fmtCost(cacheSavingsUsd)} saved (Sonnet rates)` : undefined}
         color="text-amber-400"
       />
     </div>
