@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Fetch encrypted secrets from the dotfiles repo.
-# Skips silently if the token already exists.
+# Skips silently if the token already exists or if running in CI.
 set -e
+
+# GitHub Actions (and most CI systems) set CI=true — nothing to fetch there
+if [ "${CI}" = "true" ]; then
+  exit 0
+fi
 
 TOKEN_PATH="/c/Code/.cloudflare-token"
 DOTFILES_DIR="/c/Code/dotfiles"
