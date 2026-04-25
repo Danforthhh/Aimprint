@@ -51,7 +51,7 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
       <Card
         label="Active tokens"
         value={fmtTokens(active, true)}
-        sub={`${fmtTokens(totals.input ?? 0, true)} input · ${fmtTokens(totals.output ?? 0, true)} output · ${fmtTokens(totals.cache_creation ?? 0, true)} cache write`}
+        sub={`${fmtTokens(totals.input ?? 0, true)} input · ${fmtTokens(totals.output ?? 0, true)} output · ${fmtTokens(totals.cache_creation ?? 0, true)} cache write · ${fmtTokens(cacheRead, true)} cache read`}
         color="text-blue-400"
         badge={<ComparisonBadge current={active} previous={prevActive} />}
       />
