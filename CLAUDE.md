@@ -19,6 +19,15 @@ A Claude Code token usage tracker. Syncs local JSONL session logs to Cloudflare 
 - Before answering architecture questions, read `graphify-out/GRAPH_REPORT.md`
 - After modifying source files, run: `npx graphify` to regenerate the graph
 
+## New machine setup
+
+**At the start of every session, check:**
+1. Does `/c/Code/.cloudflare-token` exist? → `ls /c/Code/.cloudflare-token`
+2. If missing → run `npm install` (installs git hooks + prompts for passphrase to decrypt token from dotfiles)
+3. Token comes from `github.com/Danforthhh/dotfiles` (private, encrypted with AES-256)
+
+> If this is a brand-new clone, `npm install` handles everything. If it's an existing clone that predates this setup, run `npm install` once to install the git hooks — after that every `git pull` checks automatically.
+
 ## Dev workflow
 ```bash
 npm run worker:dev    # local Worker on port 8787
