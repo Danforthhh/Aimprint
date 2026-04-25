@@ -33,22 +33,27 @@ function Card({ label, value, sub, color = 'text-white', badge }: CardProps) {
 }
 
 export default function SummaryCards({ totals, totalsPrev }: Props) {
-  const total = (totals.input ?? 0) + (totals.output ?? 0) + (totals.cache_read ?? 0) + (totals.cache_creation ?? 0)
-  const totalDouble = (totalsPrev?.input ?? 0) + (totalsPrev?.output ?? 0) + (totalsPrev?.cache_read ?? 0) + (totalsPrev?.cache_creation ?? 0)
+  // "Active" tokens = tokens requiring real computation (excludes cache reads, which are
+  // served cheaply and would otherwise dwarf the number, making it appear static)
+  const active     = (totals.input ?? 0) + (totals.output ?? 0) + (totals.cache_creation ?? 0)
+  const cacheRead  = totals.cache_read ?? 0
+  const grandTotal = active + cacheRead
 
-  // Previous period = double window minus current window (isolates the period before)
-  const prevTokens   = Math.max(0, totalDouble - total)
-  const prevSessions = Math.max(0, (totalsPrev?.sessions ?? 0) - (totals.sessions ?? 0))
-  const prevCost     = Math.max(0, (totalsPrev?.cost_usd ?? 0) - (totals.cost_usd ?? 0))
+  const activePrev    = (totalsPrev?.input ?? 0) + (totalsPrev?.output ?? 0) + (totalsPrev?.cache_creation ?? 0)
+  const prevActive    = Math.max(0, activePrev - active)
+  const prevSessions  = Math.max(0, (totalsPrev?.sessions ?? 0) - (totals.sessions ?? 0))
+  const prevCost      = Math.max(0, (totalsPrev?.cost_usd ?? 0) - (totals.cost_usd ?? 0))
+
+  const cacheEfficiency = grandTotal > 0 ? Math.round((cacheRead / grandTotal) * 100) : 0
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <Card
-        label="Total tokens"
-        value={fmtTokens(total, true)}
-        sub={`${fmtTokens(totals.input ?? 0, true)} input · ${fmtTokens(totals.output ?? 0, true)} output`}
+        label="Active tokens"
+        value={fmtTokens(active, true)}
+        sub={`${fmtTokens(totals.input ?? 0, true)} input · ${fmtTokens(totals.output ?? 0, true)} output · ${fmtTokens(totals.cache_creation ?? 0, true)} cache write`}
         color="text-blue-400"
-        badge={<ComparisonBadge current={total} previous={prevTokens} />}
+        badge={<ComparisonBadge current={active} previous={prevActive} />}
       />
       <Card
         label="Sessions"
@@ -65,8 +70,8 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
       />
       <Card
         label="Cache efficiency"
-        value={total > 0 ? `${Math.round(((totals.cache_read ?? 0) / total) * 100)}%` : '—'}
-        sub="Tokens served from cache"
+        value={cacheEfficiency > 0 ? `${cacheEfficiency}%` : '—'}
+        sub={`${fmtTokens(cacheRead, true)} tokens served from cache`}
         color="text-amber-400"
       />
     </div>
