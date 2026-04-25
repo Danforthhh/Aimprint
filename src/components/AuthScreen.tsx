@@ -51,7 +51,18 @@ export default function AuthScreen() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">A</div>
+            <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+              <rect width="64" height="64" rx="14" fill="#2563eb"/>
+              <path d="M 10,40 A 22,22 0 0 1 54,40" fill="none" stroke="white" strokeWidth="3" opacity="0.3" strokeLinecap="round"/>
+              <path d="M 10,40 A 22,22 0 0 1 44,20" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="10" y1="40" x2="14" y2="37" stroke="white" strokeWidth="1.5" opacity="0.5"/>
+              <line x1="32" y1="18" x2="32" y2="22" stroke="white" strokeWidth="1.5" opacity="0.5"/>
+              <line x1="54" y1="40" x2="50" y2="37" stroke="white" strokeWidth="1.5" opacity="0.5"/>
+              <line x1="32" y1="40" x2="43" y2="21" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              <circle cx="32" cy="40" r="7" fill="white" opacity="0.2"/>
+              <circle cx="32" cy="40" r="7" fill="none" stroke="white" strokeWidth="2.5"/>
+              <circle cx="32" cy="40" r="2.5" fill="white"/>
+            </svg>
             <span className="text-2xl font-bold text-white">Aimprint</span>
           </div>
           <p className="text-gray-400 text-sm">Your AI usage footprint</p>
