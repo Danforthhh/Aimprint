@@ -20,8 +20,9 @@ import DailyChart     from './components/DailyChart'
 import CategoryChart  from './components/CategoryChart'
 import SubagentChart  from './components/SubagentChart'
 import DimChart          from './components/DimChart'
-import AgentCallsCard   from './components/AgentCallsCard'
-import SessionTable     from './components/SessionTable'
+import AgentCallsCard      from './components/AgentCallsCard'
+import CostSimulatorCard  from './components/CostSimulatorCard'
+import SessionTable       from './components/SessionTable'
 
 const EMPTY_TOTALS: Totals = { input: 0, output: 0, cache_read: 0, cache_creation: 0, cost_usd: 0, requests: 0, sessions: 0 }
 
@@ -187,6 +188,11 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CategoryChart data={categories} />
           <AgentCallsCard agentCalls={agentCalls} sessionsWithAgents={sessionsWithAgents} dailyData={dailyAgentCalls} />
+        </div>
+
+        {/* Cost simulator */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CostSimulatorCard totalCostUsd={totals.cost_usd ?? 0} categories={categories} />
         </div>
 
         {/* Charts row 3 */}
