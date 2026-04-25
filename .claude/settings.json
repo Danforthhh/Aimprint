@@ -6,11 +6,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'npm run deploy\\|wrangler deploy'; then npx tsc --noEmit 2>&1; fi"
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'npm run deploy|wrangler deploy|git push'; then npx tsc --noEmit 2>&1; fi"
           },
           {
             "type": "agent",
             "prompt": "If the bash command contains 'npm run deploy' or 'wrangler deploy', read .claude/agents/code-reviewer.md and review all files changed since the last commit using git diff HEAD. Report CRITICAL issues that block deployment, HIGH issues that are warnings, and LOW issues that are suggestions. Block on CRITICAL only."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "If the bash command that just ran contains 'git commit', 'npm run deploy', or 'wrangler deploy', read .claude/agents/doc-updater.md and follow its instructions to update the documentation."
           }
         ]
       }

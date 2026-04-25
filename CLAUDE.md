@@ -26,11 +26,29 @@ npm run dev           # Vite frontend proxies /api to :8787
 npm run sync          # run sync agent (needs sync/.env)
 ```
 
-## Deploy
+## Deploy pipeline
+
+Every change goes through this sequence — steps 1–3 are enforced automatically via `.claude/settings.json` hooks:
+
+| Step | Trigger | How |
+|------|---------|-----|
+| 1. TypeScript check | `git push` or `npm run deploy` | PreToolUse command hook — blocks on errors |
+| 2. Code review | `npm run deploy` or `wrangler deploy` | PreToolUse agent hook — blocks on CRITICAL findings |
+| 3. Docs update | After `git commit` / `npm run deploy` / `wrangler deploy` | PostToolUse agent hook — updates Changelog.md, Setup docs, CLAUDE.md |
+| 4. Push to main | `git push` | GitHub Actions builds + deploys frontend to GitHub Pages |
+| 5. Worker deploy | `npm run worker:deploy` | Manual — only needed when `worker/` files changed |
+
 ```bash
-npm run worker:deploy  # deploy Cloudflare Worker
-# push to main → GitHub Actions auto-deploys frontend to GitHub Pages
+# Frontend change
+git commit -m "..."   # → doc-updater runs automatically
+git push              # → tsc check, then GitHub Actions deploys
+
+# Worker change
+git commit -m "..."
+npm run worker:deploy  # → tsc check + code review + doc-updater, then deploys
 ```
+
+> `npm run deploy` (gh-pages direct) is kept for one-off deploys without a push, but **push to main is the canonical path** — GitHub Actions handles the build with proper secrets.
 
 ## Critical files
 | File | Purpose |

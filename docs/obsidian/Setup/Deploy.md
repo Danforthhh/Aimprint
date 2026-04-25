@@ -43,13 +43,33 @@ npm run worker:deploy
 In your GitHub repo → Settings → Pages → Source: **Deploy from a branch** → branch `gh-pages` → `/ (root)` → Save.
 
 ## 7. Deploy the frontend
+
+**Canonical path — push to main:**
 ```bash
-npm run deploy
-# Builds with Vite and pushes dist/ to the gh-pages branch via gh-pages package
-# Site available at: https://<your-github-username>.github.io/Aimprint/
+git push origin main
+# GitHub Actions builds with proper secrets and deploys to GitHub Pages automatically
 ```
 
-Run `npm run deploy` after any frontend change to publish the updated dashboard.
+**One-off direct deploy (no push):**
+```bash
+npm run deploy
+# Builds locally and pushes dist/ to the gh-pages branch directly
+# Requires a local .env with all VITE_* variables
+```
+
+The site is available at: `https://<your-github-username>.github.io/Aimprint/`
+
+## Day-to-day deploy pipeline
+
+Each of these steps is enforced automatically via `.claude/settings.json` hooks when working inside Claude Code:
+
+| Step | When | Automatic? |
+|------|------|------------|
+| TypeScript check | `git push` or `npm run deploy` | Yes — blocks on errors |
+| Code review | `npm run deploy` or `wrangler deploy` | Yes — blocks on CRITICAL findings |
+| Docs update | After any commit or deploy | Yes — updates Changelog.md + Setup docs |
+| Frontend deploy | `git push` to main | Yes — GitHub Actions |
+| Worker deploy | `npm run worker:deploy` | Manual — only when `worker/` changed |
 
 ## Notes
 - The Firebase Web API key (VITE_FIREBASE_API_KEY) is embedded in the built JS — this is expected for Firebase web apps. Restrict it to your GitHub Pages domain in Google Cloud Console → APIs & Services → Credentials → HTTP referrers.
