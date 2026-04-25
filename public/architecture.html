@@ -2,243 +2,339 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Aimprint — Architecture</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: #0f172a;
     color: #e2e8f0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    padding: 40px;
-    min-height: 100vh;
+    padding: 48px;
+    min-width: 1100px;
   }
-  h1 { font-size: 20px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+  h1 { font-size: 24px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
+  .subtitle { font-size: 14px; color: #64748b; margin-bottom: 36px; }
 
-  /* LOCAL vs CLOUD legend */
-  .legend {
-    display: flex; gap: 24px; margin-bottom: 28px; align-items: center;
-  }
-  .legend-item {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: #94a3b8;
-  }
-  .legend-dot {
-    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
-  }
+  /* ── Legend ── */
+  .legend { display: flex; gap: 28px; margin-bottom: 36px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
 
-  .diagram-wrap {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 16px;
-    padding: 40px;
-    display: flex;
-    justify-content: center;
-  }
-  .mermaid svg { max-width: 100%; }
+  /* ── Main layout ── */
+  .arch { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
 
-  /* Install table */
-  .install-table {
-    margin-top: 32px;
+  /* ── Zone boxes ── */
+  .zone {
+    border-radius: 16px; padding: 28px;
+    border: 2px solid;
+  }
+  .zone-local   { background: #080f1e; border-color: #1d4ed8; }
+  .zone-cloud   { background: #060f0a; border-color: #065f46; }
+  .zone-browser { background: #0d0818; border-color: #6d28d9; grid-column: 1 / -1; }
+
+  .zone-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+  }
+  .zone-local   .zone-title { color: #60a5fa; }
+  .zone-cloud   .zone-title { color: #34d399; }
+  .zone-browser .zone-title { color: #a78bfa; }
+
+  /* ── Nodes ── */
+  .nodes { display: flex; flex-direction: column; gap: 16px; }
+  .nodes-row { display: flex; gap: 16px; }
+
+  .node {
     background: #1e293b;
     border: 1px solid #334155;
     border-radius: 12px;
-    overflow: hidden;
+    padding: 16px 20px;
+    flex: 1;
   }
-  .install-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .install-table thead tr { background: #0f172a; }
+  .node-icon { font-size: 20px; margin-bottom: 8px; }
+  .node-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
+  .node-sub { font-size: 12px; color: #64748b; line-height: 1.6; }
+  .node-sub code { color: #7dd3fc; font-family: 'Menlo', 'Consolas', monospace; font-size: 11px; }
+  .node-badge {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; margin-top: 8px;
+  }
+  .badge-local   { background: #1e3a5f; color: #60a5fa; }
+  .badge-cloud   { background: #0f2e20; color: #34d399; }
+  .badge-browser { background: #2d1040; color: #c084fc; }
+
+  /* ── Sub-zones inside cloud ── */
+  .sub-zones { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .sub-zone { border-radius: 10px; padding: 16px; border: 1px solid; }
+  .sub-zone-cf   { background: #081a10; border-color: #065f46; }
+  .sub-zone-gh   { background: #0d1117; border-color: #30363d; }
+  .sub-zone-fb   { background: #130b24; border-color: #4c1d95; }
+  .sub-zone-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; margin-bottom: 12px;
+  }
+  .sub-zone-cf .sub-zone-title { color: #34d399; }
+  .sub-zone-gh .sub-zone-title { color: #8b949e; }
+  .sub-zone-fb .sub-zone-title { color: #a78bfa; }
+
+  /* ── Arrows ── */
+  .arrows { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
+  .arrow {
+    display: flex; align-items: center; gap: 12px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+    padding: 10px 16px; font-size: 12px; color: #94a3b8;
+  }
+  .arrow-icon { font-size: 16px; }
+  .arrow strong { color: #e2e8f0; }
+  .arrow code { color: #7dd3fc; font-family: 'Menlo', 'Consolas', monospace; font-size: 11px; }
+  .arrow-label {
+    margin-left: auto; font-size: 11px; padding: 2px 10px;
+    border-radius: 4px; background: #0f172a; color: #475569;
+    border: 1px solid #334155; white-space: nowrap;
+  }
+
+  /* ── Install table ── */
+  .section-title {
+    font-size: 13px; font-weight: 600; color: #64748b;
+    text-transform: uppercase; letter-spacing: .06em;
+    margin: 36px 0 16px;
+  }
+  .install-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .install-table thead tr { background: #1e293b; }
   .install-table th {
-    text-align: left; padding: 12px 16px;
+    text-align: left; padding: 12px 18px;
     font-size: 11px; font-weight: 600; color: #64748b;
     text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid #334155;
   }
-  .install-table td { padding: 10px 16px; border-top: 1px solid #1e293b; color: #94a3b8; vertical-align: top; }
+  .install-table td {
+    padding: 12px 18px; border-bottom: 1px solid #1e293b;
+    color: #94a3b8; vertical-align: top; line-height: 1.6;
+    background: #111827;
+  }
   .install-table tr:hover td { background: #1a2234; }
+  .install-table td:first-child { color: #f1f5f9; font-weight: 600; }
+  .install-table code {
+    color: #7dd3fc; font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 12px; background: #0f172a; padding: 1px 6px; border-radius: 4px;
+  }
   .tag {
-    display: inline-block; font-size: 10px; font-weight: 600;
-    padding: 2px 8px; border-radius: 4px; margin-right: 6px;
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px; margin-right: 4px;
   }
   .tag-local   { background: #1e3a5f; color: #60a5fa; }
   .tag-cloud   { background: #0f2e20; color: #34d399; }
   .tag-browser { background: #2d1040; color: #c084fc; }
-  code { color: #7dd3fc; font-family: 'Menlo', 'Consolas', monospace; }
-
-  .cards { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .card {
-    background: #1e293b; border: 1px solid #334155;
-    border-radius: 12px; padding: 20px;
-  }
-  .card-title {
-    font-size: 11px; font-weight: 600; color: #64748b;
-    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px;
-  }
-  .card-body { font-size: 12px; color: #94a3b8; line-height: 1.8; }
 </style>
 </head>
 <body>
+
 <h1>Aimprint — Architecture</h1>
-<p class="subtitle">Claude Code token usage tracker · Cloudflare Worker + D1 · React dashboard</p>
+<p class="subtitle">Claude Code token tracker · Cloudflare Worker + D1 · React dashboard</p>
 
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div> Runs locally on each Claude Code machine</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> Managed cloud service (zero install)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Accessed via browser (any device)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div> LOCAL — install on each Claude Code machine</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#065f46"></div> CLOUD — zero install, managed services</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6d28d9"></div> BROWSER — any device, no install</div>
 </div>
 
-<div class="diagram-wrap">
-<div class="mermaid">
-%%{init: {
-  'theme': 'dark',
-  'themeVariables': {
-    'primaryColor': '#1e40af',
-    'primaryTextColor': '#e2e8f0',
-    'primaryBorderColor': '#3b82f6',
-    'lineColor': '#475569',
-    'secondaryColor': '#0f172a',
-    'tertiaryColor': '#1e293b',
-    'background': '#1e293b',
-    'mainBkg': '#1e293b',
-    'nodeBorder': '#334155',
-    'clusterBkg': '#0f172a',
-    'titleColor': '#94a3b8',
-    'edgeLabelBackground': '#1e293b',
-    'fontFamily': '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
-  }
-}}%%
-graph LR
+<!-- ── Main diagram ── -->
+<div class="arch">
 
-  subgraph LOCAL ["  🖥️  LOCAL — install on each Claude Code machine  "]
-    direction TB
-    CC["⚙️ Claude Code\n─────────────\nCLI · npm install -g @anthropic-ai/claude-code"]
-    JSONL["📄 Session logs\n─────────────\n~/.claude/projects/*.jsonl\nauto-generated"]
-    SYNC["🔄 Sync agent\n─────────────\ngit clone Aimprint\nnpm install → npm run sync"]
-    CLASS["🏷️ Classifier\n─────────────\nsync/classifier.ts\nwork type detection"]
-    CC -->|writes| JSONL
-    JSONL -->|reads| SYNC
-    SYNC --> CLASS
-  end
-
-  subgraph CLOUD ["  ☁️  CLOUD — zero install, always on  "]
-    direction TB
-
-    subgraph CF ["Cloudflare"]
-      WORKER["🔧 Worker\n─────────────\nwrangler deploy\nroutes.ts · auth.ts"]
-      D1[("🗄️ D1 SQLite\n─────────────\ntoken_usage\nsession_meta\nsync_tokens · users")]
-      WORKER <-->|queries| D1
-    end
-
-    subgraph GH ["GitHub"]
-      GHA["⚙️ GitHub Actions\n─────────────\nauto on git push\nnpm ci → vite build"]
-      PAGES["🌐 GitHub Pages\n─────────────\ndanforthhh.github.io/Aimprint\nstatic hosting"]
-      GHA -->|deploys| PAGES
-    end
-
-    subgraph FB ["Firebase (Google)"]
-      AUTH["🔐 Firebase Auth\n─────────────\nGoogle SSO\nJWT issuer · verifier"]
-    end
-  end
-
-  subgraph BROWSER ["  🌐  BROWSER — any device, no install  "]
-    REACT["📊 React Dashboard\n─────────────\nVite · Tailwind · recharts\nserved from GitHub Pages"]
-  end
-
-  CLASS -->|"POST /ingest\nX-Sync-Token header"| WORKER
-  REACT -->|"GET /api/*\nAuthorization: Bearer JWT"| WORKER
-  WORKER -.->|verify JWT| AUTH
-  REACT <-->|"sign in"| AUTH
-  PAGES -.->|serves| REACT
-
-  style LOCAL fill:#0a1628,stroke:#1d4ed8,color:#93c5fd
-  style CLOUD fill:#081a10,stroke:#059669,color:#6ee7b7
-  style BROWSER fill:#160d2a,stroke:#7c3aed,color:#c4b5fd
-  style CF fill:#0f2420,stroke:#065f46,color:#6ee7b7
-  style GH fill:#111827,stroke:#374151,color:#9ca3af
-  style FB fill:#1a1040,stroke:#4c1d95,color:#c4b5fd
-</div>
-</div>
-
-<!-- What to install where -->
-<div class="install-table" style="margin-top: 32px;">
-  <table>
-    <thead>
-      <tr>
-        <th style="width:22%">Component</th>
-        <th style="width:14%">Where</th>
-        <th style="width:32%">How to install</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong style="color:#e2e8f0">Claude Code</strong></td>
-        <td><span class="tag tag-local">Local</span></td>
-        <td><code>npm install -g @anthropic-ai/claude-code</code></td>
-        <td>One install per machine. Generates the JSONL session logs.</td>
-      </tr>
-      <tr>
-        <td><strong style="color:#e2e8f0">Sync agent</strong></td>
-        <td><span class="tag tag-local">Local</span></td>
-        <td><code>git clone Aimprint && npm install</code><br><code>npm run sync</code> (cron or manual)</td>
-        <td>Reads <code>~/.claude/projects/*.jsonl</code>, classifies sessions, pushes to Worker. Needs a sync token from Settings.</td>
-      </tr>
-      <tr>
-        <td><strong style="color:#e2e8f0">Cloudflare Worker + D1</strong></td>
-        <td><span class="tag tag-cloud">Cloud</span></td>
-        <td><code>npm run worker:deploy</code><br>(needs <code>CLOUDFLARE_API_TOKEN</code>)</td>
-        <td>Deploy once. Auto-scales. D1 is a managed SQLite — no server to maintain.</td>
-      </tr>
-      <tr>
-        <td><strong style="color:#e2e8f0">Firebase Auth</strong></td>
-        <td><span class="tag tag-cloud">Cloud</span></td>
-        <td>Configured in Firebase Console once</td>
-        <td>Google SSO — no user management to maintain.</td>
-      </tr>
-      <tr>
-        <td><strong style="color:#e2e8f0">React Dashboard</strong></td>
-        <td><span class="tag tag-cloud">Cloud</span> <span class="tag tag-browser">Browser</span></td>
-        <td><code>git push</code> → GitHub Actions builds + deploys automatically</td>
-        <td>Hosted on GitHub Pages. No server. Accessible from any browser.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="cards">
-  <div class="card">
-    <div class="card-title">Data flow — Sync</div>
-    <div class="card-body">
-      1. Claude Code writes JSONL after each API request<br>
-      2. Sync agent reads from cursor offset (never re-reads)<br>
-      3. Classifier assigns work type (<code>code_writing</code>, <code>planning</code>…)<br>
-      4. Batch POST to Worker with <code>X-Sync-Token</code><br>
-      5. Worker deduplicates by <code>request_id</code>
+  <!-- LOCAL -->
+  <div class="zone zone-local">
+    <div class="zone-title">🖥️ LOCAL — one setup per Claude Code machine</div>
+    <div class="nodes">
+      <div class="node">
+        <div class="node-icon">⚙️</div>
+        <div class="node-title">Claude Code CLI</div>
+        <div class="node-sub">
+          Anthropic's coding assistant<br>
+          After every API call, appends a line to<br>
+          <code>~/.claude/projects/*/logs/*.jsonl</code>
+        </div>
+        <span class="node-badge badge-local">npm install -g @anthropic-ai/claude-code</span>
+      </div>
+      <div class="node">
+        <div class="node-icon">🔄</div>
+        <div class="node-title">Sync agent</div>
+        <div class="node-sub">
+          Reads JSONL from cursor offset (never re-reads)<br>
+          Classifies sessions by work type via <code>classifier.ts</code><br>
+          Batches records → POST to Worker API
+        </div>
+        <span class="node-badge badge-local">git clone Aimprint → npm install → npm run sync</span>
+      </div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">Data flow — Dashboard</div>
-    <div class="card-body">
-      1. User opens app → Firebase Google SSO<br>
-      2. Firebase issues JWT (ID token)<br>
-      3. React sends <code>Bearer JWT</code> on every API call<br>
-      4. Worker verifies JWT → queries D1 filtered by <code>user_id</code><br>
-      5. Charts rendered client-side via recharts
+
+  <!-- CLOUD -->
+  <div class="zone zone-cloud">
+    <div class="zone-title">☁️ CLOUD — deployed once, always on</div>
+    <div class="sub-zones">
+
+      <div class="sub-zone sub-zone-cf">
+        <div class="sub-zone-title">☁ Cloudflare</div>
+        <div class="nodes">
+          <div class="node">
+            <div class="node-icon">🔧</div>
+            <div class="node-title">Worker (API)</div>
+            <div class="node-sub">
+              Verifies Firebase JWT<br>
+              Handles all <code>/api/*</code> routes<br>
+              <code>routes.ts</code> + <code>auth.ts</code>
+            </div>
+            <span class="node-badge badge-cloud">npm run worker:deploy</span>
+          </div>
+          <div class="node" style="margin-top:12px">
+            <div class="node-icon">🗄️</div>
+            <div class="node-title">D1 SQLite</div>
+            <div class="node-sub">
+              <code>token_usage</code> — 1 row / request<br>
+              <code>session_meta</code> — category, tools<br>
+              <code>sync_tokens</code> — 1 per machine<br>
+              <code>users</code> — uid → email
+            </div>
+            <span class="node-badge badge-cloud">managed — no server</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-zone sub-zone-fb">
+        <div class="sub-zone-title">🔐 Firebase (Google)</div>
+        <div class="node" style="height:calc(100% - 28px)">
+          <div class="node-icon">🔐</div>
+          <div class="node-title">Firebase Auth</div>
+          <div class="node-sub">
+            Google SSO — no password to manage<br>
+            Issues JWT after sign-in<br>
+            Worker verifies JWT on every request
+          </div>
+          <span class="node-badge badge-cloud">configured in Firebase Console</span>
+        </div>
+      </div>
+
+      <div class="sub-zone sub-zone-gh">
+        <div class="sub-zone-title">🚀 GitHub</div>
+        <div class="nodes">
+          <div class="node">
+            <div class="node-icon">⚙️</div>
+            <div class="node-title">GitHub Actions</div>
+            <div class="node-sub">
+              Triggered on <code>git push main</code><br>
+              Runs <code>npm ci</code> → <code>vite build</code><br>
+              Deploys to GitHub Pages
+            </div>
+            <span class="node-badge badge-cloud">automatic on push</span>
+          </div>
+          <div class="node" style="margin-top:12px">
+            <div class="node-icon">🌐</div>
+            <div class="node-title">GitHub Pages</div>
+            <div class="node-sub">
+              Static hosting for the React app<br>
+              <code>danforthhh.github.io/Aimprint</code>
+            </div>
+            <span class="node-badge badge-cloud">free static hosting</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">D1 Schema</div>
-    <div class="card-body">
-      <code>token_usage</code> — one row per API request<br>
-      <code>session_meta</code> — category, first_message, tool_summary<br>
-      <code>sync_tokens</code> — one per machine, created in Settings<br>
-      <code>users</code> — Firebase UID → email mapping<br><br>
-      All queries filter by <code>user_id</code> (multi-tenant safe)
+
+  <!-- BROWSER -->
+  <div class="zone zone-browser">
+    <div class="zone-title">🌐 BROWSER — any device, no install required</div>
+    <div class="nodes-row">
+      <div class="node" style="flex:2">
+        <div class="node-icon">📊</div>
+        <div class="node-title">React Dashboard</div>
+        <div class="node-sub">
+          Served from GitHub Pages · Built with Vite + React 19 + Tailwind CSS 4 + recharts<br>
+          Signs in via Firebase Google SSO → receives JWT → calls <code>GET /api/*</code> on the Worker with <code>Authorization: Bearer &lt;JWT&gt;</code>
+        </div>
+        <span class="node-badge badge-browser">open danforthhh.github.io/Aimprint in any browser</span>
+      </div>
+      <div class="node" style="flex:1">
+        <div class="node-icon">📈</div>
+        <div class="node-title">What you see</div>
+        <div class="node-sub">
+          Daily token usage chart<br>
+          Work type breakdown (weekly trend)<br>
+          Cost simulator (1× → 20×)<br>
+          Top sessions by cost<br>
+          By project / model / machine
+        </div>
+      </div>
     </div>
+  </div>
+
+</div><!-- end .arch -->
+
+<!-- ── Data flows ── -->
+<div class="arrows">
+  <div class="arrow">
+    <span class="arrow-icon">🔄</span>
+    <span><strong>Sync agent → Worker</strong> &nbsp;·&nbsp; <code>POST /ingest</code> with header <code>X-Sync-Token: &lt;token&gt;</code> &nbsp;·&nbsp; Batch of token records + session metadata &nbsp;·&nbsp; Worker deduplicates by <code>request_id</code></span>
+    <span class="arrow-label">Local → Cloud</span>
+  </div>
+  <div class="arrow">
+    <span class="arrow-icon">🌐</span>
+    <span><strong>Dashboard → Worker</strong> &nbsp;·&nbsp; <code>GET /api/usage</code>, <code>/api/sessions</code>, <code>/api/category-trend</code>… with header <code>Authorization: Bearer &lt;Firebase JWT&gt;</code></span>
+    <span class="arrow-label">Browser → Cloud</span>
+  </div>
+  <div class="arrow">
+    <span class="arrow-icon">🔐</span>
+    <span><strong>Worker → Firebase</strong> &nbsp;·&nbsp; Verifies the JWT on every request &nbsp;·&nbsp; Extracts <code>uid</code> &nbsp;·&nbsp; All D1 queries filter by <code>user_id = uid</code> (multi-tenant safe)</span>
+    <span class="arrow-label">Cloud internal</span>
   </div>
 </div>
 
-<script>
-  mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
-</script>
+<!-- ── Install table ── -->
+<p class="section-title">What to install where</p>
+<table class="install-table">
+  <thead>
+    <tr>
+      <th style="width:18%">Component</th>
+      <th style="width:12%">Where</th>
+      <th style="width:35%">How to install / deploy</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Claude Code</td>
+      <td><span class="tag tag-local">Local</span></td>
+      <td><code>npm install -g @anthropic-ai/claude-code</code></td>
+      <td>One install per machine. Auto-generates JSONL logs at <code>~/.claude/projects/</code></td>
+    </tr>
+    <tr>
+      <td>Sync agent</td>
+      <td><span class="tag tag-local">Local</span></td>
+      <td><code>git clone Aimprint</code> → <code>npm install</code> → add sync token in Settings → <code>npm run sync</code> (cron or manual)</td>
+      <td>Reads local JSONL, classifies work types, pushes to Worker. Each machine needs its own sync token.</td>
+    </tr>
+    <tr>
+      <td>Cloudflare Worker + D1</td>
+      <td><span class="tag tag-cloud">Cloud</span></td>
+      <td><code>CLOUDFLARE_API_TOKEN=$(cat /c/Code/.cloudflare-token) npm run worker:deploy</code></td>
+      <td>Deploy once (or on worker/ changes). D1 is a managed SQLite — no server to maintain.</td>
+    </tr>
+    <tr>
+      <td>Firebase Auth</td>
+      <td><span class="tag tag-cloud">Cloud</span></td>
+      <td>Configured once in Firebase Console — Google provider enabled</td>
+      <td>Fully managed. No user database to maintain.</td>
+    </tr>
+    <tr>
+      <td>React Dashboard</td>
+      <td><span class="tag tag-cloud">Cloud</span> <span class="tag tag-browser">Browser</span></td>
+      <td><code>git push</code> → GitHub Actions builds + deploys automatically</td>
+      <td>Hosted on GitHub Pages. No server. Works from any browser on any device.</td>
+    </tr>
+  </tbody>
+</table>
+
 </body>
 </html>
