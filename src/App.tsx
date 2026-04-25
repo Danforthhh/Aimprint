@@ -12,7 +12,8 @@ import type {
 } from './types'
 import { DEFAULT_FILTERS } from './types'
 
-import CategoryTrendChart from './components/CategoryTrendChart'
+import CategoryTrendChart   from './components/CategoryTrendChart'
+import PricingReferenceCard from './components/PricingReferenceCard'
 import AuthScreen    from './components/AuthScreen'
 import OnboardingPage from './components/OnboardingPage'
 import SettingsModal  from './components/SettingsModal'
@@ -200,9 +201,10 @@ export default function App() {
           <AgentCallsCard agentCalls={agentCalls} sessionsWithAgents={sessionsWithAgents} dailyData={dailyAgentCalls} />
         </div>
 
-        {/* Cost simulator */}
+        {/* Cost simulator + pricing reference */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CostSimulatorCard totalCostUsd={totals.cost_usd ?? 0} categories={categories} />
+          <PricingReferenceCard />
         </div>
 
         {/* Charts row 3 */}
