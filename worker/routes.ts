@@ -4,6 +4,7 @@ import {
   insertTokenRecords, upsertSessionMeta, updateSessionCategory,
   queryDailyUsage, queryTotals, queryRequestCategories, querySubagent,
   queryDailyAgentCalls, queryAgentCalls, queryByDimension, querySessions, queryDistinct, queryTickets,
+  queryCategoryTrend,
   deleteUserAccount,
   type D1Database, type TokenRecord, type SessionMeta,
 } from './db'
@@ -299,6 +300,24 @@ export const handleDeleteAccount: Handler = async (req, env) => {
 
   await deleteUserAccount(env.DB, user.uid)
   return json({ ok: true })
+}
+
+// ─── GET /api/category-trend ─────────────────────────────────────────────────
+
+export const handleCategoryTrend: Handler = async (req, env) => {
+  const user = await requireFirebaseAuth(req, env)
+  if (user instanceof Response) return user
+
+  const url = new URL(req.url)
+  const days    = clampDays(url.searchParams.get('days') ?? '30')
+  const project = url.searchParams.get('project') ?? 'all'
+  const model   = url.searchParams.get('model')   ?? 'all'
+  const machine = url.searchParams.get('machine') ?? 'all'
+  const ticket  = url.searchParams.get('ticket')  ?? 'all'
+  // Deliberately NOT filtering by category — the trend shows all categories
+  const f = { userId: user.uid, days, project, model, machine, ticket }
+  const data = await queryCategoryTrend(env.DB, f)
+  return json({ data })
 }
 
 // ─── GET /api/export/csv ──────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { auth } from './services/firebase'
 import {
   fetchUsage, fetchCategories, fetchSidechain,
   fetchBreakdown, fetchSessions, fetchFilters, downloadCsv,
+  fetchCategoryTrend,
 } from './services/api'
 import type {
   FilterState, FiltersData, DayUsage, Totals,
@@ -11,6 +12,7 @@ import type {
 } from './types'
 import { DEFAULT_FILTERS } from './types'
 
+import CategoryTrendChart from './components/CategoryTrendChart'
 import AuthScreen    from './components/AuthScreen'
 import OnboardingPage from './components/OnboardingPage'
 import SettingsModal  from './components/SettingsModal'
@@ -38,7 +40,8 @@ export default function App() {
   const [filtersData, setFiltersData] = useState<FiltersData>({ projects: [], models: [], machines: [], tickets: [] })
 
   // Data
-  const [daily,      setDaily]      = useState<DayUsage[]>([])
+  const [daily,           setDaily]          = useState<DayUsage[]>([])
+  const [categoryTrend,   setCategoryTrend]  = useState<{ week: string; category: string; tokens: number; cost_usd: number }[]>([])
   const [totals,     setTotals]     = useState<Totals>(EMPTY_TOTALS)
   const [totalsPrev, setTotalsPrev] = useState<Totals>(EMPTY_TOTALS)
   const [categories, setCategories] = useState<CategoryItem[]>([])
@@ -75,7 +78,7 @@ export default function App() {
     setLoading(true)
     setError('')
     try {
-      const [usage, cats, side, proj, mod, mach, sess, top, fdata] = await Promise.all([
+      const [usage, cats, side, proj, mod, mach, sess, top, fdata, trend] = await Promise.all([
         fetchUsage(filters),
         fetchCategories(filters),
         fetchSidechain(filters),
@@ -85,8 +88,10 @@ export default function App() {
         fetchSessions(filters),
         fetchSessions(filters, 10, 0, 'cost_desc'),
         fetchFilters(),
+        fetchCategoryTrend(filters),
       ])
       setDaily(usage.daily)
+      setCategoryTrend(trend.data)
       setTotals(usage.totals ?? EMPTY_TOTALS)
       setTotalsPrev(usage.totalsPrev ?? EMPTY_TOTALS)
       setCategories(cats.categories)
@@ -187,6 +192,7 @@ export default function App() {
 
         {/* Charts row 1 */}
         <DailyChart data={daily} />
+        <CategoryTrendChart data={categoryTrend} />
 
         {/* Charts row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

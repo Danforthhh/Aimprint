@@ -114,6 +114,11 @@ export interface FiltersData {
   tickets: string[]
 }
 
+export interface CategoryTrendPoint {
+  week: string
+  [category: string]: number | string  // category keys map to token counts
+}
+
 // ── Dashboard filter state ─────────────────────────────────────────────────────
 
 export interface FilterState {

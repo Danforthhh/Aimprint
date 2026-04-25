@@ -2,6 +2,7 @@ import {
   handleIngest,
   handleUsage, handleCategories, handleSidechain, handleBreakdown,
   handleSessions, handleUpdateCategory, handleFilters,
+  handleCategoryTrend,
   handleCreateSyncToken, handleListSyncTokens, handleDeleteSyncToken,
   handleExportCsv, handleDeleteAccount,
 } from './routes'
@@ -50,9 +51,10 @@ export default {
     }
 
     // ── Dashboard API ──────────────────────────────────────────────────────
-    else if (method === 'GET'  && path === '/api/usage')       response = await handleUsage(request, env)
-    else if (method === 'GET'  && path === '/api/categories')  response = await handleCategories(request, env)
-    else if (method === 'GET'  && path === '/api/sidechain')   response = await handleSidechain(request, env)
+    else if (method === 'GET'  && path === '/api/usage')            response = await handleUsage(request, env)
+    else if (method === 'GET'  && path === '/api/categories')       response = await handleCategories(request, env)
+    else if (method === 'GET'  && path === '/api/category-trend')   response = await handleCategoryTrend(request, env)
+    else if (method === 'GET'  && path === '/api/sidechain')        response = await handleSidechain(request, env)
     else if (method === 'GET'  && path === '/api/filters')     response = await handleFilters(request, env)
     else if (method === 'GET'  && path === '/api/export/csv')  response = await handleExportCsv(request, env)
 

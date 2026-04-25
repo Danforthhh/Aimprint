@@ -399,6 +399,28 @@ export async function queryTickets(db: D1Database, userId: string) {
   return result.results.map(r => r.val)
 }
 
+export async function queryCategoryTrend(
+  db: D1Database,
+  f: UsageFilters,
+): Promise<{ week: string; category: string; tokens: number; cost_usd: number }[]> {
+  const { clause, bindings } = buildWhere(f)
+  const sql = `
+    SELECT
+      strftime('%Y-W%W', tu.date)                                         AS week,
+      COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other')    AS category,
+      CAST(SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS INTEGER) AS tokens,
+      SUM(tu.cost_usd)                                                    AS cost_usd
+    FROM token_usage tu
+    LEFT JOIN session_meta sm
+      ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
+    WHERE ${clause}
+    GROUP BY week, category
+    ORDER BY week ASC
+  `
+  const res = await db.prepare(sql).bind(...bindings).all<{ week: string; category: string; tokens: number; cost_usd: number }>()
+  return res.results ?? []
+}
+
 // ─── Account deletion ─────────────────────────────────────────────────────────
 
 /**

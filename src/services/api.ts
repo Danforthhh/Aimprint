@@ -60,6 +60,12 @@ export async function fetchCategories(f: FilterState): Promise<{ categories: Cat
   return apiFetch(`/api/categories${qs(f)}`)
 }
 
+export async function fetchCategoryTrend(
+  f: FilterState,
+): Promise<{ data: Array<{ week: string; category: string; tokens: number; cost_usd: number }> }> {
+  return apiFetch(`/api/category-trend${qs(f)}`)
+}
+
 export async function fetchSidechain(f: FilterState): Promise<{ data: SubagentItem[] }> {
   return apiFetch(`/api/sidechain${qs(f)}`)
 }
