@@ -291,8 +291,12 @@ export async function querySessions(
   f: UsageFilters,
   limit = 50,
   offset = 0,
+  sort: 'recent' | 'cost_desc' = 'recent',
 ) {
   const { clause, bindings } = buildWhere(f)
+  const orderBy = sort === 'cost_desc'
+    ? 'ORDER BY SUM(tu.cost_usd) DESC'
+    : 'ORDER BY MAX(tu.timestamp) DESC'
   const result = await db.prepare(
     `SELECT tu.session_id,
             tu.machine,
@@ -309,7 +313,7 @@ export async function querySessions(
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
      WHERE ${clause}
      GROUP BY tu.session_id
-     ORDER BY MAX(tu.timestamp) DESC
+     ${orderBy}
      LIMIT ? OFFSET ?`
   ).bind(...bindings, limit, offset).all()
   return result.results

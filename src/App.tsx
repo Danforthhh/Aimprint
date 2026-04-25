@@ -22,6 +22,7 @@ import SubagentChart  from './components/SubagentChart'
 import DimChart          from './components/DimChart'
 import AgentCallsCard      from './components/AgentCallsCard'
 import CostSimulatorCard  from './components/CostSimulatorCard'
+import TopSessionsCard    from './components/TopSessionsCard'
 import SessionTable       from './components/SessionTable'
 
 const EMPTY_TOTALS: Totals = { input: 0, output: 0, cache_read: 0, cache_creation: 0, cost_usd: 0, requests: 0, sessions: 0 }
@@ -49,6 +50,7 @@ export default function App() {
   const [sessionsWithAgents,  setSessWithAgents]      = useState(0)
   const [dailyAgentCalls,     setDailyAgentCalls]     = useState<{ date: string; agent_calls: number }[]>([])
   const [sessions,            setSessions]            = useState<Session[]>([])
+  const [topSessions,         setTopSessions]         = useState<Session[]>([])
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState('')
 
@@ -73,7 +75,7 @@ export default function App() {
     setLoading(true)
     setError('')
     try {
-      const [usage, cats, side, proj, mod, mach, sess, fdata] = await Promise.all([
+      const [usage, cats, side, proj, mod, mach, sess, top, fdata] = await Promise.all([
         fetchUsage(filters),
         fetchCategories(filters),
         fetchSidechain(filters),
@@ -81,6 +83,7 @@ export default function App() {
         fetchBreakdown('model',   filters.days),
         fetchBreakdown('machine', filters.days),
         fetchSessions(filters),
+        fetchSessions(filters, 10, 0, 'cost_desc'),
         fetchFilters(),
       ])
       setDaily(usage.daily)
@@ -95,6 +98,7 @@ export default function App() {
       setSessWithAgents(usage.sessions_with_agents ?? 0)
       setDailyAgentCalls(usage.daily_agent_calls ?? [])
       setSessions(sess.sessions)
+      setTopSessions(top.sessions)
       setFiltersData(fdata)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data')
@@ -207,6 +211,9 @@ export default function App() {
           <DimChart title="By machine" data={machineDim} color="#f97316" />
           <SubagentChart data={sidechain} />
         </div>
+
+        {/* Top sessions by cost */}
+        <TopSessionsCard sessions={topSessions} />
 
         {/* Sessions */}
         <SessionTable sessions={sessions} onCategoryChanged={handleCategoryChanged} />

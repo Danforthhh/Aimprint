@@ -68,11 +68,16 @@ export async function fetchBreakdown(dim: string, days: number): Promise<{ data:
   return apiFetch(`/api/breakdown/${dim}?days=${days}`)
 }
 
-export async function fetchSessions(f: FilterState, limit = 50, offset = 0): Promise<{ sessions: Session[] }> {
+export async function fetchSessions(
+  f: FilterState,
+  limit = 50,
+  offset = 0,
+  sort: 'recent' | 'cost_desc' = 'recent',
+): Promise<{ sessions: Session[] }> {
   const p = new URLSearchParams({
     days: String(f.days), project: f.project, model: f.model,
     machine: f.machine, category: f.category, ticket: f.ticket,
-    limit: String(limit), offset: String(offset),
+    limit: String(limit), offset: String(offset), sort,
   })
   return apiFetch(`/api/sessions?${p}`)
 }

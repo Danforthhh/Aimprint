@@ -207,9 +207,11 @@ export const handleSessions: Handler = async (req, env) => {
   const ticket   = url.searchParams.get('ticket') ?? 'all'
   const limit    = clampLimit(url.searchParams.get('limit') ?? '50')
   const offset   = Math.max(0, parseInt(url.searchParams.get('offset') ?? '0') || 0)
+  const sortRaw  = url.searchParams.get('sort') ?? 'recent'
+  const sort     = sortRaw === 'cost_desc' ? 'cost_desc' : 'recent'
 
   const f = { userId: user.uid, days, project, model, machine, category, ticket }
-  const sessions = await querySessions(env.DB, f, limit, offset)
+  const sessions = await querySessions(env.DB, f, limit, offset, sort)
   return json({ sessions })
 }
 
