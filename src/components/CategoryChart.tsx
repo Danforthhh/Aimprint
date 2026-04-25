@@ -1,6 +1,6 @@
 import type { CategoryItem } from '../types'
 import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_DESCRIPTIONS } from '../types'
-import { fmtTokens } from '../utils/format'
+import { fmtTokens, fmtCost } from '../utils/format'
 
 interface Props { data: CategoryItem[] }
 
@@ -41,6 +41,12 @@ export default function CategoryChart({ data }: Props) {
                   style={{ width: `${pct}%`, backgroundColor: color }}
                 />
               </div>
+              {item.sessions > 0 && (
+                <div className="flex gap-3 mt-0.5 text-xs text-gray-600">
+                  <span>{fmtTokens(Math.round(item.tokens / item.sessions), true)} / session</span>
+                  <span>{fmtCost(item.cost_usd / item.sessions)} / session</span>
+                </div>
+              )}
             </div>
           )
         })}
