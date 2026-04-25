@@ -315,6 +315,37 @@ export async function querySessions(
   return result.results
 }
 
+export async function queryAgentCalls(
+  db: D1Database,
+  f: UsageFilters,
+): Promise<{ agent_calls: number; sessions_with_agents: number }> {
+  const conditions: string[] = ['tu.user_id = ?']
+  const bindings: unknown[] = [f.userId]
+
+  if (f.days && f.days > 0) {
+    const since = new Date(Date.now() - f.days * 86400_000).toISOString().slice(0, 10)
+    conditions.push('tu.date >= ?')
+    bindings.push(since)
+  }
+  if (f.project && f.project !== 'all') { conditions.push('tu.project = ?'); bindings.push(f.project) }
+  if (f.model   && f.model   !== 'all') { conditions.push('tu.model = ?');   bindings.push(f.model) }
+  if (f.machine && f.machine !== 'all') { conditions.push('tu.machine = ?'); bindings.push(f.machine) }
+
+  const where = conditions.join(' AND ')
+  const row = await db.prepare(
+    `SELECT COALESCE(SUM(CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER)), 0) AS agent_calls,
+            COUNT(CASE WHEN CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
+     FROM (
+       SELECT DISTINCT tu.session_id, sm.tool_summary
+       FROM token_usage tu
+       LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
+       WHERE ${where}
+     )`
+  ).bind(...bindings).first<{ agent_calls: number; sessions_with_agents: number }>()
+
+  return { agent_calls: row?.agent_calls ?? 0, sessions_with_agents: row?.sessions_with_agents ?? 0 }
+}
+
 export async function queryDistinct(db: D1Database, userId: string, col: 'project' | 'model' | 'machine') {
   const result = await db.prepare(
     `SELECT DISTINCT ${col} AS val FROM token_usage WHERE user_id = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`

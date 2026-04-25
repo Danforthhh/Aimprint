@@ -49,6 +49,8 @@ export async function fetchUsage(f: FilterState): Promise<{
   daily: DayUsage[]
   totals: Totals
   totalsPrev: Totals
+  agent_calls: number
+  sessions_with_agents: number
 }> {
   return apiFetch(`/api/usage${qs(f)}`)
 }

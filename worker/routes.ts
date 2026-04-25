@@ -3,7 +3,7 @@ import {
   upsertUser, lookupSyncToken, createSyncToken, listSyncTokens, deleteSyncToken,
   insertTokenRecords, upsertSessionMeta, updateSessionCategory,
   queryDailyUsage, queryTotals, queryRequestCategories, querySubagent,
-  queryByDimension, querySessions, queryDistinct, queryTickets,
+  queryAgentCalls, queryByDimension, querySessions, queryDistinct, queryTickets,
   deleteUserAccount,
   type D1Database, type TokenRecord, type SessionMeta,
 } from './db'
@@ -123,13 +123,17 @@ export const handleUsage: Handler = async (req, env) => {
   const ticket   = url.searchParams.get('ticket') ?? 'all'
 
   const f = { userId: user.uid, days, project, model, machine, category, ticket }
-  const [daily, totals] = await Promise.all([queryDailyUsage(env.DB, f), queryTotals(env.DB, f)])
+  const [daily, totals, agentCalls] = await Promise.all([
+    queryDailyUsage(env.DB, f),
+    queryTotals(env.DB, f),
+    queryAgentCalls(env.DB, f),
+  ])
 
   // Previous period for comparison: fetch totals for double window
   const prevF = { ...f, days: days === 0 ? 0 : days * 2 }
   const totalsPrev = await queryTotals(env.DB, prevF)
 
-  return json({ daily, totals, totalsPrev })
+  return json({ daily, totals, totalsPrev, agent_calls: agentCalls.agent_calls, sessions_with_agents: agentCalls.sessions_with_agents })
 }
 
 // ─── GET /api/categories ──────────────────────────────────────────────────────
