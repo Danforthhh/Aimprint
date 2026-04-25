@@ -173,7 +173,7 @@ export default function App() {
         {/* Charts row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CategoryChart data={categories} />
-          <SubagentChart data={sidechain} />
+          <AgentCallsCard agentCalls={agentCalls} sessionsWithAgents={sessionsWithAgents} />
         </div>
 
         {/* Charts row 3 */}
@@ -186,7 +186,7 @@ export default function App() {
           />
           <DimChart title="By model"   data={modelDim}   color="#22c55e" />
           <DimChart title="By machine" data={machineDim} color="#f97316" />
-          <AgentCallsCard agentCalls={agentCalls} sessionsWithAgents={sessionsWithAgents} />
+          <SubagentChart data={sidechain} />
         </div>
 
         {/* Sessions */}

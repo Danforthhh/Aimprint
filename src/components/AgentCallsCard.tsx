@@ -5,7 +5,7 @@ interface Props {
 
 export default function AgentCallsCard({ agentCalls, sessionsWithAgents }: Props) {
   return (
-    <div className="card flex flex-col justify-between h-40">
+    <div className="card flex flex-col justify-between">
       <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Sub-agent calls</h3>
       <div>
         <p className="text-4xl font-bold text-white">{agentCalls.toLocaleString()}</p>
