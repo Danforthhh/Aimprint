@@ -9,12 +9,13 @@ export type Category =
   | 'deep_analysis'
   | 'refinement'
   | 'planning'
+  | 'document_writing'
   | 'random'
   | 'other'
 
 export const ALL_CATEGORIES: Category[] = [
   'code_writing', 'code_process', 'quality', 'deep_analysis',
-  'refinement', 'planning', 'random', 'other',
+  'refinement', 'planning', 'document_writing', 'random', 'other',
 ]
 
 export interface ToolCounts {
@@ -43,9 +44,11 @@ const RE_PLANNING   = /plan|prd|ticket|story|roadmap|strateg|epic|sprint|backlog
 const RE_ANALYSIS   = /explai|analys|analyz|understand|how does|what is|why |architecture|investigate|research|explore/i
 const RE_WRITING    = /implement|write|create|add|build|generat|develop|code/i
 const RE_DEBUG      = /fix|bug|error|crash|broken|debug|issue|problem|fail/i
+const RE_DOCUMENT   = /powerpoint|presentation|slides|slide.?deck|\.pptx|word.?doc|\.docx|spreadsheet|\.xlsx|generate.*(report|document|pdf)|pptx|docx|xlsx/i
 
 const RE_BASH_OPS   = /docker|kubectl|helm|wrangler deploy|terraform|npm run (deploy|prod)|yarn deploy|gh pr create|gh release/i
 const RE_BASH_QUAL  = /jest|vitest|npm test|yarn test|eslint|prettier|lint|coverage/i
+const RE_BASH_DOC   = /\.pptx|\.docx|\.xlsx|python-pptx|pptx|docx|xlsx/i
 
 // ── Per-request classifier ─────────────────────────────────────────────────────
 
@@ -73,6 +76,7 @@ export function classifyRequest(input: {
   // Strong: bash command signals
   if (bashCommands.some(c => RE_BASH_OPS.test(c)))  return 'code_process'
   if (bashCommands.some(c => RE_BASH_QUAL.test(c))) return 'quality'
+  if (bashCommands.some(c => RE_BASH_DOC.test(c)))  return 'document_writing'
 
   // Strong: editing / planning tools
   if (toolNames.includes('TodoWrite')) return 'planning'
@@ -85,6 +89,7 @@ export function classifyRequest(input: {
   if (toolNames.length === 0 && userMessage) {
     if (RE_OPS.test(userMessage))        return 'code_process'
     if (RE_QUALITY.test(userMessage))    return 'quality'
+    if (RE_DOCUMENT.test(userMessage))   return 'document_writing'
     if (RE_PLANNING.test(userMessage))   return 'planning'
     if (RE_REFINEMENT.test(userMessage)) return 'refinement'
     if (RE_ANALYSIS.test(userMessage))   return 'deep_analysis'
@@ -116,13 +121,15 @@ export function classify(input: ClassifyInput): Category {
   const bashHasQual = qualCount >= 1
 
   // Score signals
+  const docBashCount = bashCommands.filter(c => RE_BASH_DOC.test(c)).length
   const signals = {
-    planning:    (toolCounts.todo > 0 ? 3 : 0) + (RE_PLANNING.test(firstMessage) ? 2 : 0),
-    code_process: (bashHasOps ? 4 : 0) + (RE_OPS.test(firstMessage) ? 2 : 0),
-    quality:     (bashHasQual ? 4 : 0) + (RE_QUALITY.test(firstMessage) ? 2 : 0),
-    refinement:  (RE_REFINEMENT.test(firstMessage) ? 3 : 0) + (toolCounts.edit > 2 && toolCounts.bash === 0 ? 1 : 0),
-    deep_analysis: (toolCounts.read > 8 && toolCounts.edit < 2 ? 4 : 0) + (RE_ANALYSIS.test(firstMessage) ? 2 : 0),
-    code_writing: (toolCounts.edit > 3 ? 3 : 0) + (RE_WRITING.test(firstMessage) ? 2 : 0) + (RE_DEBUG.test(firstMessage) ? 1 : 0),
+    planning:         (toolCounts.todo > 0 ? 3 : 0) + (RE_PLANNING.test(firstMessage) ? 2 : 0),
+    code_process:     (bashHasOps ? 4 : 0) + (RE_OPS.test(firstMessage) ? 2 : 0),
+    quality:          (bashHasQual ? 4 : 0) + (RE_QUALITY.test(firstMessage) ? 2 : 0),
+    document_writing: (docBashCount >= 1 ? 4 : 0) + (RE_DOCUMENT.test(firstMessage) ? 3 : 0),
+    refinement:       (RE_REFINEMENT.test(firstMessage) ? 3 : 0) + (toolCounts.edit > 2 && toolCounts.bash === 0 ? 1 : 0),
+    deep_analysis:    (toolCounts.read > 8 && toolCounts.edit < 2 ? 4 : 0) + (RE_ANALYSIS.test(firstMessage) ? 2 : 0),
+    code_writing:     (toolCounts.edit > 3 ? 3 : 0) + (RE_WRITING.test(firstMessage) ? 2 : 0) + (RE_DEBUG.test(firstMessage) ? 1 : 0),
   }
 
   // Pick highest score

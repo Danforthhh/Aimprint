@@ -30,7 +30,7 @@ function clampLimit(raw: string, def = 50): number {
 
 const VALID_CATEGORIES = new Set([
   'code_writing', 'code_process', 'quality', 'deep_analysis',
-  'refinement', 'planning', 'random', 'other',
+  'refinement', 'planning', 'document_writing', 'random', 'other',
 ])
 
 function json(data: unknown, status = 200): Response {

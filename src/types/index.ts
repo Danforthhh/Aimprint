@@ -5,12 +5,13 @@ export type Category =
   | 'deep_analysis'
   | 'refinement'
   | 'planning'
+  | 'document_writing'
   | 'random'
   | 'other'
 
 export const ALL_CATEGORIES: Category[] = [
   'code_writing', 'code_process', 'quality', 'deep_analysis',
-  'refinement', 'planning', 'random', 'other',
+  'refinement', 'planning', 'document_writing', 'random', 'other',
 ]
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -19,8 +20,9 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   quality:       'Quality',
   deep_analysis: 'Deep analysis',
   refinement:    'Refinement',
-  planning:      'Planning',
-  random:        'Random',
+  planning:         'Planning',
+  document_writing: 'Document writing',
+  random:           'Random',
   other:         'Other',
 }
 
@@ -30,8 +32,9 @@ export const CATEGORY_DESCRIPTIONS: Record<Category, { summary: string; examples
   quality:       { summary: 'Tests, linting, code review, security',             examples: 'e.g. writing Jest tests, fixing ESLint errors, reviewing a PR' },
   deep_analysis: { summary: 'Codebase exploration, architecture review',         examples: 'e.g. reading many files, understanding a codebase, architecture planning' },
   refinement:    { summary: 'Refactoring, simplifying, cleaning up',             examples: 'e.g. extracting functions, renaming variables, removing dead code' },
-  planning:      { summary: 'PRDs, tickets, strategy, roadmaps',                 examples: 'e.g. writing a spec, creating ClickUp tickets, drafting a roadmap' },
-  random:        { summary: 'Quick questions, short sessions (< 3 min)',         examples: 'e.g. "how does X work?", one-off lookups, quick fixes' },
+  planning:         { summary: 'PRDs, tickets, strategy, roadmaps',                 examples: 'e.g. writing a spec, creating ClickUp tickets, drafting a roadmap' },
+  document_writing: { summary: 'Generating documents, presentations, spreadsheets', examples: 'e.g. creating a .pptx, generating a Word report, building an Excel file' },
+  random:           { summary: 'Quick questions, short sessions (< 3 min)',         examples: 'e.g. "how does X work?", one-off lookups, quick fixes' },
   other:         { summary: 'Doesn\'t fit a clear pattern',                      examples: 'Mixed or unclear work type' },
 }
 
@@ -41,8 +44,9 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   quality:       '#22c55e',  // green-500
   deep_analysis: '#a855f7',  // purple-500
   refinement:    '#14b8a6',  // teal-500
-  planning:      '#eab308',  // yellow-500
-  random:        '#6b7280',  // gray-500
+  planning:         '#eab308',  // yellow-500
+  document_writing: '#ec4899',  // pink-500
+  random:           '#6b7280',  // gray-500
   other:         '#64748b',  // slate-500
 }
 
