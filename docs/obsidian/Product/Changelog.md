@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.0 — 2026-04
+
+### Multi-machine onboarding + sub-agent counter
+- **Setup instructions on token generation**: generating a new sync token in Settings now shows the full setup guide (git clone, pre-filled `sync/.env`, `npm run sync`) directly in the modal — no need to re-read the docs when adding a new machine.
+- **Sub-agent calls counter**: replaced the empty "No ticket data yet" box with a live counter of Agent tool calls, pulled from `tool_summary` in D1. Shows total calls and number of sessions that used sub-agents.
+- **Automated deploy pipeline**: TypeScript check now also triggers on `git push`; PostToolUse hook auto-updates Changelog + Setup docs after every commit or deploy; hook patterns extended to cover `npm run worker:deploy`.
+
 ## v1.0.0 — 2026-04
 
 ### Initial release
