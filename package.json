@@ -12,7 +12,8 @@
     "worker:deploy": "wrangler deploy --config worker/wrangler.toml",
     "worker:migrate": "wrangler d1 migrations apply aimprint-db --config worker/wrangler.toml",
     "worker:migrate:local": "wrangler d1 migrations apply aimprint-db --local --config worker/wrangler.toml",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "prepare": "bash scripts/install-hooks.sh && bash scripts/fetch-secrets.sh"
   },
   "dependencies": {
     "firebase": "^11.0.0",
