@@ -136,13 +136,23 @@ export default function SettingsModal({ onClose }: Props) {
             </div>
 
             {newToken && (
-              <div className="mb-3 bg-gray-800 rounded-lg p-3">
-                <p className="text-xs text-amber-400 mb-2">⚠ Save this token — it's shown only once</p>
+              <div className="mb-3 bg-gray-800 rounded-lg p-3 space-y-3">
+                <p className="text-xs text-amber-400">⚠ Save this token — it's shown only once</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 text-xs text-green-400 break-all font-mono">{newToken}</code>
                   <button onClick={copy} className="text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
+                </div>
+                <div className="border-t border-gray-700 pt-3 space-y-2">
+                  <p className="text-xs text-gray-400 font-medium">Setup on the new machine:</p>
+                  <p className="text-xs text-gray-500">1. Clone &amp; install</p>
+                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/vin-bories/Aimprint
+cd Aimprint && npm install`}</pre>
+                  <p className="text-xs text-gray-500">2. Create <code className="text-gray-300">sync/.env</code></p>
+                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`WORKER_URL=${import.meta.env.VITE_WORKER_URL}\nSYNC_TOKEN=${newToken}`}</pre>
+                  <p className="text-xs text-gray-500">3. Run sync</p>
+                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300">npm run sync</pre>
                 </div>
               </div>
             )}
