@@ -1,6 +1,3 @@
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from 'recharts'
 import type { CategoryItem } from '../types'
 import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_DESCRIPTIONS } from '../types'
 import { fmtTokens } from '../utils/format'
@@ -48,23 +45,6 @@ export default function CategoryChart({ data }: Props) {
           )
         })}
       </div>
-      <ResponsiveContainer width="100%" height={140}>
-        <BarChart data={sorted} layout="vertical" margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-          <XAxis type="number" tickFormatter={n => fmtTokens(n)} tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis type="category" dataKey="category" tickFormatter={c => CATEGORY_LABELS[c as keyof typeof CATEGORY_LABELS] ?? c} tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} width={90} />
-          <Tooltip
-            formatter={(v: number) => fmtTokens(v)}
-            contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-            labelStyle={{ color: '#e5e7eb' }}
-            itemStyle={{ color: '#9ca3af' }}
-          />
-          <Bar dataKey="tokens" radius={[0,3,3,0]}>
-            {sorted.map(item => (
-              <Cell key={item.category} fill={CATEGORY_COLORS[item.category] ?? '#6b7280'} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
     </div>
   )
 }
