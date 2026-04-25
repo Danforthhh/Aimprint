@@ -46,6 +46,7 @@ export default function App() {
   const [machineDim,          setMachineDim]          = useState<DimItem[]>([])
   const [agentCalls,          setAgentCalls]          = useState(0)
   const [sessionsWithAgents,  setSessWithAgents]      = useState(0)
+  const [dailyAgentCalls,     setDailyAgentCalls]     = useState<{ date: string; agent_calls: number }[]>([])
   const [sessions,            setSessions]            = useState<Session[]>([])
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState('')
@@ -91,6 +92,7 @@ export default function App() {
       setMachineDim(mach.data)
       setAgentCalls(usage.agent_calls ?? 0)
       setSessWithAgents(usage.sessions_with_agents ?? 0)
+      setDailyAgentCalls(usage.daily_agent_calls ?? [])
       setSessions(sess.sessions)
       setFiltersData(fdata)
     } catch (e) {
@@ -173,7 +175,7 @@ export default function App() {
         {/* Charts row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CategoryChart data={categories} />
-          <AgentCallsCard agentCalls={agentCalls} sessionsWithAgents={sessionsWithAgents} />
+          <AgentCallsCard agentCalls={agentCalls} sessionsWithAgents={sessionsWithAgents} dailyData={dailyAgentCalls} />
         </div>
 
         {/* Charts row 3 */}

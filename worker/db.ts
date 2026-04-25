@@ -315,6 +315,41 @@ export async function querySessions(
   return result.results
 }
 
+export async function queryDailyAgentCalls(
+  db: D1Database,
+  f: UsageFilters,
+): Promise<{ date: string; agent_calls: number }[]> {
+  const conditions: string[] = ['tu.user_id = ?']
+  const bindings: unknown[] = [f.userId]
+
+  if (f.days && f.days > 0) {
+    const since = new Date(Date.now() - f.days * 86400_000).toISOString().slice(0, 10)
+    conditions.push('tu.date >= ?')
+    bindings.push(since)
+  }
+  if (f.project && f.project !== 'all') { conditions.push('tu.project = ?'); bindings.push(f.project) }
+  if (f.model   && f.model   !== 'all') { conditions.push('tu.model = ?');   bindings.push(f.model) }
+  if (f.machine && f.machine !== 'all') { conditions.push('tu.machine = ?'); bindings.push(f.machine) }
+
+  const where = conditions.join(' AND ')
+  const result = await db.prepare(
+    `SELECT date, SUM(agent_count) AS agent_calls
+     FROM (
+       SELECT MIN(tu.date) AS date,
+              CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) AS agent_count
+       FROM token_usage tu
+       LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
+       WHERE ${where}
+       GROUP BY tu.session_id
+       HAVING CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) > 0
+     )
+     GROUP BY date
+     ORDER BY date ASC`
+  ).bind(...bindings).all<{ date: string; agent_calls: number }>()
+
+  return result.results
+}
+
 export async function queryAgentCalls(
   db: D1Database,
   f: UsageFilters,
