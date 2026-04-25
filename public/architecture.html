@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Aimprint — Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 40px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 36px;
+  }
+  .diagram-wrap {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+  }
+  .mermaid svg {
+    max-width: 100%;
+  }
+</style>
+</head>
+<body>
+<h1>Aimprint — Architecture</h1>
+<p class="subtitle">Claude Code token usage tracker · Cloudflare Worker + D1 · React dashboard</p>
+
+<div class="diagram-wrap">
+<div class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e40af',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#475569',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e293b',
+    'background': '#1e293b',
+    'mainBkg': '#1e293b',
+    'nodeBorder': '#334155',
+    'clusterBkg': '#0f172a',
+    'titleColor': '#94a3b8',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+  }
+}}%%
+graph TB
+
+  subgraph DEV ["  🖥️  Developer machine  "]
+    direction TB
+    CC["Claude Code\n─────────────\nCLI tool"]
+    JSONL["Session logs\n─────────────\n~/.claude/projects/\n*.jsonl"]
+    SYNC["Sync agent\n─────────────\nNode.js · sync/index.ts\nCursor-based, deduped"]
+    CLASS["Classifier\n─────────────\nsync/classifier.ts\nWork type detection"]
+    CC -->|writes| JSONL
+    JSONL -->|reads| SYNC
+    SYNC --> CLASS
+  end
+
+  subgraph CLOUD ["  ☁️  Cloudflare Edge  "]
+    direction TB
+    WORKER["Worker\n─────────────\nroutes.ts · auth.ts\nFirebase JWT verify"]
+    D1[("D1 SQLite\n─────────────\ntoken_usage\nsession_meta\nsync_tokens\nusers")]
+    WORKER <-->|queries| D1
+  end
+
+  subgraph AUTH ["  🔐  Firebase  "]
+    FB["Firebase Auth\n─────────────\nGoogle SSO\nJWT issuer"]
+  end
+
+  subgraph CI ["  🚀  GitHub  "]
+    GHA["GitHub Actions\n─────────────\nnpm ci → vite build\non push to main"]
+    PAGES["GitHub Pages\n─────────────\ndanforthhh.github.io\n/Aimprint"]
+    GHA -->|deploys| PAGES
+  end
+
+  subgraph BROWSER ["  🌐  Browser  "]
+    direction TB
+    REACT["React Dashboard\n─────────────\nVite · Tailwind CSS 4\nrecharts · Firebase SDK"]
+  end
+
+  CLASS -->|"POST /ingest\nX-Sync-Token"| WORKER
+  REACT -->|"GET /api/*\nBearer JWT"| WORKER
+  WORKER -.->|"verifies JWT"| FB
+  REACT <-->|"sign in / get token"| FB
+  PAGES -.->|"serves"| REACT
+
+  style DEV fill:#0f1e38,stroke:#1d4ed8,color:#93c5fd
+  style CLOUD fill:#0f2420,stroke:#059669,color:#6ee7b7
+  style AUTH fill:#2d1b4e,stroke:#7c3aed,color:#c4b5fd
+  style CI fill:#1a1a2e,stroke:#6366f1,color:#a5b4fc
+  style BROWSER fill:#1a1215,stroke:#db2777,color:#f9a8d4
+</div>
+</div>
+
+<div style="margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
+    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Data flow — Sync</div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
+      1. Claude Code writes JSONL after each request<br>
+      2. Sync agent polls on cursor offset (never re-reads)<br>
+      3. Classifier assigns work type (code_writing, planning…)<br>
+      4. Batch POST to Worker with sync token auth<br>
+      5. Worker deduplicates by <code style="color:#7dd3fc">request_id</code>
+    </div>
+  </div>
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
+    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Data flow — Dashboard</div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
+      1. User opens app → Firebase Google SSO<br>
+      2. Firebase issues JWT (ID token)<br>
+      3. React sends Bearer JWT on every API call<br>
+      4. Worker verifies JWT → queries D1 filtered by <code style="color:#7dd3fc">user_id</code><br>
+      5. Charts rendered client-side via recharts
+    </div>
+  </div>
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
+    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">D1 Schema</div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
+      <code style="color:#7dd3fc">token_usage</code> — one row per API request<br>
+      <code style="color:#7dd3fc">session_meta</code> — category, first_message, tool_summary<br>
+      <code style="color:#7dd3fc">sync_tokens</code> — machine auth tokens<br>
+      <code style="color:#7dd3fc">users</code> — Firebase UID → email<br><br>
+      All queries filter <code style="color:#7dd3fc">user_id</code> (multi-tenant)
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
+</script>
+</body>
+</html>
