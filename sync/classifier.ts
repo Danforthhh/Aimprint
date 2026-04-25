@@ -48,7 +48,7 @@ const RE_DOCUMENT   = /powerpoint|presentation|slides|slide.?deck|\.pptx|word.?d
 
 const RE_BASH_OPS   = /docker|kubectl|helm|wrangler deploy|terraform|npm run (deploy|prod)|yarn deploy|gh pr create|gh release/i
 const RE_BASH_QUAL  = /jest|vitest|npm test|yarn test|eslint|prettier|lint|coverage/i
-const RE_BASH_DOC   = /\.pptx|\.docx|\.xlsx|python-pptx|pptx|docx|xlsx/i
+const RE_BASH_DOC   = /\.pptx\b|\.docx\b|\.xlsx\b|python-pptx/i
 
 // ── Per-request classifier ─────────────────────────────────────────────────────
 
