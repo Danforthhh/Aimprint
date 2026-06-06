@@ -16,3 +16,27 @@ install_hook post-merge    # runs after git pull
 install_hook post-checkout # runs after git clone / git checkout
 
 echo "✓  Git hooks installed (post-merge, post-checkout)"
+
+# Create .claude/settings.local.json if it doesn't exist yet
+SETTINGS_LOCAL=".claude/settings.local.json"
+if [ ! -f "$SETTINGS_LOCAL" ]; then
+  cat > "$SETTINGS_LOCAL" <<'EOF'
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run sync"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+  echo "✓  Created .claude/settings.local.json (sync hook)"
+else
+  echo "✓  .claude/settings.local.json already exists — skipped"
+fi
