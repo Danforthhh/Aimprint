@@ -93,7 +93,7 @@ export default function SessionTable({ sessions, onCategoryChanged }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-800">
-              {['Date', 'Project', 'Machine', 'Model', 'Category', 'Ticket', 'Tokens', '~Cost'].map(h => (
+              {['Date', 'Project', 'Machine', 'Model', 'Category', 'Tokens', '~Cost'].map(h => (
                 <th key={h} className="text-left text-xs text-gray-500 uppercase tracking-wider pb-2 pr-4 whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -113,7 +113,7 @@ export default function SessionTable({ sessions, onCategoryChanged }: Props) {
                     onChange={c => onCategoryChanged(s.session_id, c)}
                   />
                 </td>
-                <td className="py-2 pr-4 text-xs text-blue-400">{s.ticket ?? '—'}</td>
+
                 <td className="py-2 pr-4 font-medium text-blue-300 whitespace-nowrap">{fmtTokens(s.tokens, true)}</td>
                 <td className="py-2 text-green-400 whitespace-nowrap">{fmtCost(s.cost_usd)}</td>
               </tr>
