@@ -11,7 +11,7 @@ interface TokenRow { token: string; label: string; created_at: string }
 
 export default function SettingsModal({ onClose }: Props) {
   const [tokens, setTokens]     = useState<TokenRow[]>([])
-  const [label, setLabel]       = useState('New machine')
+  const [label, setLabel]       = useState('')
   const [newToken, setNewToken] = useState('')
   const [copied, setCopied]     = useState(false)
   const [loading, setLoading]   = useState(false)
@@ -128,7 +128,7 @@ export default function SettingsModal({ onClose }: Props) {
               />
               <button
                 onClick={generate}
-                disabled={loading}
+                disabled={loading || !label.trim()}
                 className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg px-3 py-2 text-sm font-medium"
               >
                 {loading ? '…' : 'Generate'}
@@ -151,8 +151,7 @@ export default function SettingsModal({ onClose }: Props) {
 cd Aimprint && npm install`}</pre>
                   <p className="text-xs text-gray-500">2. Create <code className="text-gray-300">sync/.env</code></p>
                   <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`WORKER_URL=${import.meta.env.VITE_WORKER_URL}\nSYNC_TOKEN=${newToken}`}</pre>
-                  <p className="text-xs text-gray-500">3. Run sync</p>
-                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300">npm run sync</pre>
+                  <p className="text-xs text-gray-500">3. Sync runs automatically after every Claude Code response — no further setup needed.</p>
                 </div>
               </div>
             )}
