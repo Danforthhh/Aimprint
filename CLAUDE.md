@@ -59,6 +59,14 @@ npm run worker:deploy  # → tsc check + code review + doc-updater, then deploys
 
 > `npm run deploy` (gh-pages direct) is kept for one-off deploys without a push, but **push to main is the canonical path** — GitHub Actions handles the build with proper secrets.
 
+## Landing page — 2026-06-06
+**Context:** No public marketing page existed — GitHub Pages URL went straight to the login screen.
+**Options considered:**
+- Separate static HTML file (simpler, no React, but diverges from the design system)
+- React Router with `/` and `/dashboard` routes (cleaner long-term, adds dependency)
+- Single `LandingPage` component with `showAuth` boolean state in `App.tsx` (no new deps, minimal change)
+**Chosen:** `showAuth` state approach — zero new dependencies, 3 files touched, `AuthScreen` reused as modal overlay via optional `onClose` prop.
+
 ## Critical files
 | File | Purpose |
 |---|---|

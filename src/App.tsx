@@ -15,6 +15,7 @@ import { DEFAULT_FILTERS } from './types'
 import CategoryTrendChart   from './components/CategoryTrendChart'
 import PricingReferenceCard from './components/PricingReferenceCard'
 import AuthScreen    from './components/AuthScreen'
+import LandingPage   from './components/LandingPage'
 import OnboardingPage from './components/OnboardingPage'
 import SettingsModal  from './components/SettingsModal'
 import Filters        from './components/Filters'
@@ -35,6 +36,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true)
   const [onboarding, setOnboarding]   = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
 
   // Filter state
   const [filters, setFilters]         = useState<FilterState>(DEFAULT_FILTERS)
@@ -131,7 +133,12 @@ export default function App() {
     )
   }
 
-  if (!user) return <AuthScreen />
+  if (!user) return (
+    <>
+      <LandingPage onGetStarted={() => setShowAuth(true)} />
+      {showAuth && <AuthScreen onClose={() => setShowAuth(false)} />}
+    </>
+  )
   if (onboarding) return <OnboardingPage onDone={() => { setOnboarding(false); loadData() }} />
 
   return (

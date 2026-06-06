@@ -21,7 +21,9 @@ function friendlyAuthError(msg: string): string {
   return 'Authentication failed. Please try again.'
 }
 
-export default function AuthScreen() {
+interface AuthScreenProps { onClose?: () => void }
+
+export default function AuthScreen({ onClose }: AuthScreenProps) {
   const [mode, setMode]       = useState<'login' | 'register'>('login')
   const [email, setEmail]     = useState('')
   const [password, setPass]   = useState('')
@@ -45,9 +47,20 @@ export default function AuthScreen() {
     }
   }
 
+  const wrapperClass = onClose
+    ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4'
+    : 'min-h-screen flex items-center justify-center bg-gray-950 px-4'
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-sm">
+    <div className={wrapperClass}>
+      <div className="w-full max-w-sm relative">
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-0 text-gray-500 hover:text-white text-xl leading-none z-10"
+            aria-label="Close"
+          >×</button>
+        )}
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-3">
