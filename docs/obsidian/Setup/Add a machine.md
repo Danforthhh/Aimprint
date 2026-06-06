@@ -30,24 +30,25 @@ npm run sync
 ```
 
 ### 4. Automate (recommended)
-Add to `~/.claude/settings.json` (global Claude Code settings):
+Create `.claude/settings.local.json` at the root of your Aimprint clone (this file is gitignored — it's yours alone):
 ```json
 {
   "hooks": {
-    "SessionStart": [{
-      "hooks": [{
-        "type": "command",
-        "command": "npm run sync --prefix /path/to/Aimprint >> ~/.claude/aimprint-sync.log 2>&1 &",
-        "timeout": 30
-      }]
-    }]
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run sync"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
-Replace `/path/to/Aimprint` with the actual clone path (e.g. `C:/Code/Aimprint` on Windows or `~/Aimprint` on macOS/Linux).
-
-This syncs automatically at the start of each Claude Code session. Logs go to `~/.claude/aimprint-sync.log`.
+This triggers the sync automatically after every Claude Code response, keeping your dashboard up to date in real time while you work. The hook runs in the project root so no path configuration is needed.
 
 ## Multiple laptops, same account
 Use the same sync token on all machines. They'll all appear as separate entries in the "machine" filter of the dashboard (identified by hostname).
