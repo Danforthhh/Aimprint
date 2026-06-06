@@ -47,7 +47,7 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   planning:         '#eab308',  // yellow-500
   document_writing: '#ec4899',  // pink-500
   random:           '#6b7280',  // gray-500
-  other:         '#64748b',  // slate-500
+  other:            '#a8a29e',  // stone-400 (warm neutral, distinct from random's cool gray)
 }
 
 // ── API types ──────────────────────────────────────────────────────────────────
