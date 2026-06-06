@@ -104,7 +104,7 @@ const STEPS = [
   {
     n: '2',
     title: 'Run the sync agent',
-    desc: 'One command reads your ~/.claude/projects/ logs and pushes metadata to your private dashboard.',
+    desc: 'npm install sets everything up. The sync agent runs automatically after every Claude Code response — no manual steps.',
   },
   {
     n: '3',

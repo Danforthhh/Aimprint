@@ -29,26 +29,13 @@ SYNC_TOKEN=<your-token-from-step-1>
 npm run sync
 ```
 
-### 4. Automate (recommended)
-Create `.claude/settings.local.json` at the root of your Aimprint clone (this file is gitignored — it's yours alone):
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npm run sync"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+### 4. Done — sync is already automated
 
-This triggers the sync automatically after every Claude Code response, keeping your dashboard up to date in real time while you work. The hook runs in the project root so no path configuration is needed.
+`npm install` (step 2) automatically created `.claude/settings.local.json` with a `Stop` hook. After every Claude Code response, the sync agent runs in the background and pushes any new records to your dashboard.
+
+You don't need to do anything. To verify, open the Aimprint dashboard after your next Claude Code session — your machine should appear in the "By machine" filter.
+
+> **Note:** `.claude/settings.local.json` is gitignored — it belongs to this machine only and will never be committed.
 
 ## Multiple laptops, same account
 Use the same sync token on all machines. They'll all appear as separate entries in the "machine" filter of the dashboard (identified by hostname).
