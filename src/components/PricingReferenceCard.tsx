@@ -1,7 +1,8 @@
 const MODELS = [
-  { name: 'Claude Opus',   model: 'claude-opus-4-6',   input: 15.00, output: 75.00, cacheRead: 1.50, cacheWrite: 18.75 },
-  { name: 'Claude Sonnet', model: 'claude-sonnet-4-6', input:  3.00, output: 15.00, cacheRead: 0.30, cacheWrite:  3.75 },
-  { name: 'Claude Haiku',  model: 'claude-haiku-4-5',  input:  0.80, output:  4.00, cacheRead: 0.08, cacheWrite:  1.00 },
+  { name: 'Claude Fable 5',  model: 'claude-fable-5',    input: 10.00, output: 50.00, cacheRead: 1.00, cacheWrite: 12.50 },
+  { name: 'Claude Opus 4.8', model: 'claude-opus-4-8',   input:  5.00, output: 25.00, cacheRead: 0.50, cacheWrite:  6.25 },
+  { name: 'Claude Sonnet',   model: 'claude-sonnet-4-6', input:  3.00, output: 15.00, cacheRead: 0.30, cacheWrite:  3.75 },
+  { name: 'Claude Haiku',    model: 'claude-haiku-4-5',  input:  1.00, output:  5.00, cacheRead: 0.10, cacheWrite:  1.25 },
 ]
 
 const COLS = ['Model', 'Input /1M', 'Output /1M', 'Cache read /1M', 'Cache write /1M']

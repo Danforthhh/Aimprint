@@ -1,5 +1,5 @@
 // Estimated API cost per 1M tokens (USD)
-// Updated: 2025. Subscription billing differs — these are "API equivalent" estimates.
+// Updated: 2026-06. Subscription billing differs — these are "API equivalent" estimates.
 
 interface ModelPricing {
   input: number
@@ -9,11 +9,14 @@ interface ModelPricing {
 }
 
 const PRICING: Record<string, ModelPricing> = {
-  'claude-opus-4-6':   { input: 15.00, output: 75.00, cacheRead: 1.50,  cacheCreation: 18.75 },
-  'claude-opus-4-5':   { input: 15.00, output: 75.00, cacheRead: 1.50,  cacheCreation: 18.75 },
+  'claude-fable-5':    { input: 10.00, output: 50.00, cacheRead: 1.00,  cacheCreation: 12.50 },
+  'claude-opus-4-8':   { input:  5.00, output: 25.00, cacheRead: 0.50,  cacheCreation:  6.25 },
+  'claude-opus-4-7':   { input:  5.00, output: 25.00, cacheRead: 0.50,  cacheCreation:  6.25 },
+  'claude-opus-4-6':   { input:  5.00, output: 25.00, cacheRead: 0.50,  cacheCreation:  6.25 },
+  'claude-opus-4-5':   { input:  5.00, output: 25.00, cacheRead: 0.50,  cacheCreation:  6.25 },
   'claude-sonnet-4-6': { input:  3.00, output: 15.00, cacheRead: 0.30,  cacheCreation:  3.75 },
   'claude-sonnet-4-5': { input:  3.00, output: 15.00, cacheRead: 0.30,  cacheCreation:  3.75 },
-  'claude-haiku-4-5':  { input:  0.80, output:  4.00, cacheRead: 0.08,  cacheCreation:  1.00 },
+  'claude-haiku-4-5':  { input:  1.00, output:  5.00, cacheRead: 0.10,  cacheCreation:  1.25 },
 }
 
 const DEFAULT_PRICING: ModelPricing = { input: 3.00, output: 15.00, cacheRead: 0.30, cacheCreation: 3.75 }

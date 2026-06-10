@@ -44,9 +44,14 @@ const BATCH_SIZE = 100
 
 function estimateCost(model: string, input: number, output: number, cacheRead: number, cacheCreation: number): number {
   const p: Record<string, [number, number, number, number]> = {
-    'claude-opus-4-6':   [15.00, 75.00, 1.50,  18.75],
-    'claude-sonnet-4-6': [ 3.00, 15.00, 0.30,   3.75],
-    'claude-haiku-4-5':  [ 0.80,  4.00, 0.08,   1.00],
+    'claude-fable-5':    [10.00, 50.00, 1.00, 12.50],
+    'claude-opus-4-8':   [ 5.00, 25.00, 0.50,  6.25],
+    'claude-opus-4-7':   [ 5.00, 25.00, 0.50,  6.25],
+    'claude-opus-4-6':   [ 5.00, 25.00, 0.50,  6.25],
+    'claude-opus-4-5':   [ 5.00, 25.00, 0.50,  6.25],
+    'claude-sonnet-4-6': [ 3.00, 15.00, 0.30,  3.75],
+    'claude-sonnet-4-5': [ 3.00, 15.00, 0.30,  3.75],
+    'claude-haiku-4-5':  [ 1.00,  5.00, 0.10,  1.25],
   }
   const [pi, po, pr, pc] = p[model] ?? [3.00, 15.00, 0.30, 3.75]
   return (input * pi + output * po + cacheRead * pr + cacheCreation * pc) / 1_000_000
