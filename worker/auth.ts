@@ -58,6 +58,7 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
     const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')))
     const now = Math.floor(Date.now() / 1000)
     if (payload.exp < now)                               return null  // expired
+    if (typeof payload.nbf === 'number' && payload.nbf > now) return null  // not yet valid
     if (typeof payload.iat !== 'number' || payload.iat > now) return null  // issued in the future
     if (typeof payload.auth_time !== 'number' || payload.auth_time > now) return null  // auth in future
     if (payload.aud !== projectId)                       return null  // wrong audience
