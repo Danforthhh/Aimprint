@@ -295,23 +295,17 @@ export const handleListSyncTokens: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const tokens = await listSyncTokens(env.DB, user.uid)
-  // Mask token values in list (show only first 8 chars)
-  return json({ tokens: tokens.map(t => ({ ...t, token: t.token.slice(0, 8) + '...' })) })
+  return json({ tokens: tokens.map(t => ({ ...t, token: t.token + '...' })) })
 }
 
 export const handleDeleteSyncToken: Handler = async (req, env, params) => {
   const user = await requireFirebaseAuth(req, env)
   if (user instanceof Response) return user
 
-  const tokenPrefix = params?.prefix
-  if (!tokenPrefix) return err('Missing token prefix')
-  if (tokenPrefix.length < 8 || tokenPrefix.length > 64) return err('Token prefix must be 8–64 characters')
+  const id = params?.prefix
+  if (!id || id.length < 8 || id.length > 64) return err('Invalid token identifier')
 
-  const tokens = await listSyncTokens(env.DB, user.uid)
-  const match = tokens.find(t => t.token.startsWith(tokenPrefix))
-  if (!match) return err('Token not found', 404)
-
-  await deleteSyncToken(env.DB, user.uid, match.token)
+  await deleteSyncToken(env.DB, user.uid, id)
   return json({ ok: true })
 }
 

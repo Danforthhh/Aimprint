@@ -32,27 +32,61 @@ export async function upsertUser(db: D1Database, userId: string, email: string):
 
 // ─── Sync tokens ──────────────────────────────────────────────────────────────
 
-export async function lookupSyncToken(db: D1Database, token: string): Promise<string | null> {
-  const row = await db.prepare('SELECT user_id FROM sync_tokens WHERE token = ?')
-    .bind(token).first<{ user_id: string }>()
+async function hashToken(raw: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+export async function lookupSyncToken(db: D1Database, rawToken: string): Promise<string | null> {
+  const hash = await hashToken(rawToken)
+  // Try hashed row first (new tokens), fall back to plaintext for legacy rows
+  let row = await db.prepare('SELECT user_id FROM sync_tokens WHERE token = ?')
+    .bind(hash).first<{ user_id: string }>()
+  if (!row) {
+    row = await db.prepare('SELECT user_id FROM sync_tokens WHERE token = ? AND token_id IS NULL')
+      .bind(rawToken).first<{ user_id: string }>()
+  }
   return row?.user_id ?? null
 }
 
-export async function createSyncToken(db: D1Database, userId: string, token: string, label: string): Promise<void> {
+export async function createSyncToken(db: D1Database, userId: string, rawToken: string, label: string): Promise<void> {
+  const tokenHash = await hashToken(rawToken)
+  const tokenId   = crypto.randomUUID()
+  const prefix    = rawToken.slice(0, 8)
   await db.prepare(
-    'INSERT INTO sync_tokens (token, user_id, label, created_at) VALUES (?, ?, ?, ?)'
-  ).bind(token, userId, label, new Date().toISOString()).run()
+    'INSERT INTO sync_tokens (token, token_prefix, token_id, user_id, label, created_at) VALUES (?,?,?,?,?,?)'
+  ).bind(tokenHash, prefix, tokenId, userId, label, new Date().toISOString()).run()
 }
 
 export async function listSyncTokens(db: D1Database, userId: string) {
   const result = await db.prepare(
-    'SELECT token, label, created_at FROM sync_tokens WHERE user_id = ? ORDER BY created_at DESC'
-  ).bind(userId).all<{ token: string; label: string; created_at: string }>()
-  return result.results
+    'SELECT token, token_prefix, token_id, label, created_at FROM sync_tokens WHERE user_id = ? ORDER BY created_at DESC'
+  ).bind(userId).all<{ token: string; token_prefix: string | null; token_id: string | null; label: string; created_at: string }>()
+  return result.results.map(r => ({
+    // Use stored prefix for hashed tokens; fall back to first 8 chars for legacy plaintext rows
+    token:      r.token_prefix ?? r.token.slice(0, 8),
+    token_id:   r.token_id,
+    label:      r.label,
+    created_at: r.created_at,
+  }))
 }
 
-export async function deleteSyncToken(db: D1Database, userId: string, token: string): Promise<void> {
-  await db.prepare('DELETE FROM sync_tokens WHERE token = ? AND user_id = ?').bind(token, userId).run()
+export async function deleteSyncToken(db: D1Database, userId: string, idOrPrefix: string): Promise<void> {
+  if (idOrPrefix.includes('-')) {
+    // UUID token_id — clean path for new tokens
+    await db.prepare('DELETE FROM sync_tokens WHERE token_id = ? AND user_id = ?')
+      .bind(idOrPrefix, userId).run()
+  } else {
+    // Legacy prefix match for tokens created before hashing
+    const rows = await db.prepare(
+      'SELECT token, token_prefix FROM sync_tokens WHERE user_id = ? AND token_id IS NULL'
+    ).bind(userId).all<{ token: string; token_prefix: string | null }>()
+    const match = rows.results.find(r => (r.token_prefix ?? r.token).startsWith(idOrPrefix))
+    if (match) {
+      await db.prepare('DELETE FROM sync_tokens WHERE token = ? AND user_id = ?')
+        .bind(match.token, userId).run()
+    }
+  }
 }
 
 // ─── Token usage ──────────────────────────────────────────────────────────────

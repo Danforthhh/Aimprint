@@ -7,7 +7,7 @@ interface Props {
   onClose: () => void
 }
 
-interface TokenRow { token: string; label: string; created_at: string }
+interface TokenRow { token: string; token_id: string | null; label: string; created_at: string }
 
 export default function SettingsModal({ onClose }: Props) {
   const [tokens, setTokens]     = useState<TokenRow[]>([])
@@ -163,7 +163,7 @@ export default function SettingsModal({ onClose }: Props) {
                       <p className="text-xs text-gray-500 font-mono">{t.token}…</p>
                     </div>
                     <button
-                      onClick={() => remove(t.token.slice(0, 8))}
+                      onClick={() => remove(t.token_id ?? t.token.slice(0, 8))}
                       className="text-xs text-red-400 hover:text-red-300 ml-3"
                     >
                       Revoke

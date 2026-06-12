@@ -103,12 +103,12 @@ export async function createSyncToken(label: string): Promise<{ token: string; l
   return apiFetch('/api/sync-tokens', { method: 'POST', body: JSON.stringify({ label }) })
 }
 
-export async function listSyncTokens(): Promise<{ tokens: { token: string; label: string; created_at: string }[] }> {
+export async function listSyncTokens(): Promise<{ tokens: { token: string; token_id: string | null; label: string; created_at: string }[] }> {
   return apiFetch('/api/sync-tokens')
 }
 
-export async function deleteSyncToken(tokenPrefix: string): Promise<void> {
-  await apiFetch(`/api/sync-tokens/${encodeURIComponent(tokenPrefix)}`, { method: 'DELETE' })
+export async function deleteSyncToken(idOrPrefix: string): Promise<void> {
+  await apiFetch(`/api/sync-tokens/${encodeURIComponent(idOrPrefix)}`, { method: 'DELETE' })
 }
 
 export async function downloadCsv(f: FilterState): Promise<void> {
