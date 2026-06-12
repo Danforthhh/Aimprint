@@ -23,6 +23,10 @@ Firebase ID tokens are cached by the Firebase SDK and auto-refreshed. The Worker
 
 Sync tokens are long random strings (64 hex chars). They never expire unless manually revoked. The full token is shown only once at generation time; the list endpoint returns only the first 8 chars as a prefix for identification.
 
+## Password reset
+
+Handled entirely by Firebase — the dashboard calls `sendPasswordResetEmail(auth, email)` and Firebase sends the reset link directly. The Worker is not involved. Firebase silently succeeds for unknown emails (prevents enumeration); this is intentional.
+
 ## Security properties
 - **Cross-user data leakage:** impossible — all D1 queries filter by `user_id` derived from the verified Firebase token
 - **Sync token compromise:** revocable from dashboard (Settings → Revoke); token is deleted from D1

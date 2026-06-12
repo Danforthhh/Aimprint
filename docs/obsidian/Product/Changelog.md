@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.0 — 2026-06
+
+### Password reset + repo URL fix
+- **Password reset**: "Forgot password?" link on the login screen sends a Firebase password reset email. Firebase silently succeeds for unknown emails (prevents enumeration). Shows a confirmation banner on success.
+- **Repo URL fix**: setup instructions in `OnboardingPage` and `SettingsModal` were pointing to `vin-bories/Aimprint` — corrected to `Danforthhh/Aimprint`.
+
 ## v1.1.0 — 2026-04
 
 ### Multi-machine onboarding + sub-agent counter
