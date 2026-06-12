@@ -103,8 +103,14 @@ export async function insertTokenRecords(
     )
   )
 
-  const results = await db.batch(stmts)
-  const inserted = results.filter(r => r.meta['changes'] as number > 0).length
+  // D1 batch limit is 1000 statements — chunk to stay well under it
+  const CHUNK = 500
+  let inserted = 0
+  for (let i = 0; i < stmts.length; i += CHUNK) {
+    const chunk = stmts.slice(i, i + CHUNK)
+    const results = await db.batch(chunk)
+    inserted += results.filter(r => r.meta['changes'] as number > 0).length
+  }
   return { inserted, skipped: records.length - inserted }
 }
 
