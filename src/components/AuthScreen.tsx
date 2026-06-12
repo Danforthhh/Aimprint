@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth } from '../services/firebase'
 
@@ -24,11 +25,27 @@ function friendlyAuthError(msg: string): string {
 interface AuthScreenProps { onClose?: () => void }
 
 export default function AuthScreen({ onClose }: AuthScreenProps) {
-  const [mode, setMode]       = useState<'login' | 'register'>('login')
-  const [email, setEmail]     = useState('')
-  const [password, setPass]   = useState('')
-  const [error, setError]     = useState('')
-  const [loading, setLoading] = useState(false)
+  const [mode, setMode]           = useState<'login' | 'register'>('login')
+  const [email, setEmail]         = useState('')
+  const [password, setPass]       = useState('')
+  const [error, setError]         = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+
+  async function sendReset() {
+    if (!email) { setError('Enter your email address first.'); return }
+    setError('')
+    setLoading(true)
+    try {
+      // Firebase silently succeeds for unknown emails (prevents enumeration) — this is intentional
+      await sendPasswordResetEmail(auth, email)
+      setResetSent(true)
+    } catch (err) {
+      setError(friendlyAuthError(err instanceof Error ? err.message : ''))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -117,6 +134,12 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
               </p>
             )}
 
+            {resetSent && (
+              <p className="text-green-400 text-sm bg-green-900/20 border border-green-800 rounded-lg px-3 py-2">
+                Password reset email sent — check your inbox.
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -126,10 +149,22 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
             </button>
           </form>
 
+          {mode === 'login' && (
+            <p className="text-center text-sm text-gray-500 mt-3">
+              <button
+                onClick={sendReset}
+                disabled={loading}
+                className="text-gray-400 hover:text-gray-300 disabled:opacity-50"
+              >
+                Forgot password?
+              </button>
+            </p>
+          )}
+
           <p className="text-center text-sm text-gray-500 mt-4">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
-              onClick={() => { setMode(m => m === 'login' ? 'register' : 'login'); setError('') }}
+              onClick={() => { setMode(m => m === 'login' ? 'register' : 'login'); setError(''); setResetSent(false) }}
               className="text-blue-400 hover:text-blue-300"
             >
               {mode === 'login' ? 'Register' : 'Sign in'}

@@ -147,7 +147,7 @@ export default function SettingsModal({ onClose }: Props) {
                 <div className="border-t border-gray-700 pt-3 space-y-2">
                   <p className="text-xs text-gray-400 font-medium">Setup on the new machine:</p>
                   <p className="text-xs text-gray-500">1. Clone &amp; install</p>
-                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/vin-bories/Aimprint
+                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/Danforthhh/Aimprint
 cd Aimprint && npm install`}</pre>
                   <p className="text-xs text-gray-500">2. Create <code className="text-gray-300">sync/.env</code></p>
                   <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`WORKER_URL=${import.meta.env.VITE_WORKER_URL}\nSYNC_TOKEN=${newToken}`}</pre>

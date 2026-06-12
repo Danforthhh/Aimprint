@@ -103,7 +103,7 @@ export default function OnboardingPage({ onDone }: Props) {
           {/* Step 2 */}
           <div className={step < 2 ? 'opacity-40 pointer-events-none' : ''}>
             <h3 className="font-semibold text-white mb-1">Step 2 — Install the sync agent</h3>
-            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/vin-bories/Aimprint
+            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/Danforthhh/Aimprint
 cd Aimprint/sync
 cp .env.example .env
 # Edit .env — paste your SYNC_TOKEN and set WORKER_URL
