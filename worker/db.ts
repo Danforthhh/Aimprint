@@ -275,7 +275,7 @@ const DIM_COLUMNS: Record<string, string> = {
 
 export async function queryByDimension(db: D1Database, f: UsageFilters, dim: 'project' | 'model' | 'machine' | 'ticket') {
   const col = DIM_COLUMNS[dim]
-  if (!col) return []
+  if (!col || !Object.values(DIM_COLUMNS).includes(col)) return []
   const { clause, bindings } = buildWhere(f)
   const result = await db.prepare(
     `SELECT ${col} AS label,
@@ -394,7 +394,7 @@ export async function queryAgentCalls(
 const DISTINCT_COL_ALLOWLIST = new Set(['project', 'model', 'machine'])
 
 export async function queryDistinct(db: D1Database, userId: string, col: 'project' | 'model' | 'machine') {
-  if (!DISTINCT_COL_ALLOWLIST.has(col)) throw new Error(`Invalid column: ${col}`)
+  if (!DISTINCT_COL_ALLOWLIST.has(col)) return []
   const result = await db.prepare(
     `SELECT DISTINCT ${col} AS val FROM token_usage WHERE user_id = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`
   ).bind(userId).all<{ val: string }>()

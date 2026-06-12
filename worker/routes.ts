@@ -246,7 +246,7 @@ export const handleUpdateCategory: Handler = async (req, env, params) => {
   if (user instanceof Response) return user
 
   const sessionId = params?.id
-  if (!sessionId) return err('Missing session id')
+  if (!sessionId || sessionId.length > 128) return err('Invalid session id')
 
   const body = await req.json() as { category?: string }
   if (!body.category) return err('Missing category')
@@ -281,7 +281,9 @@ export const handleCreateSyncToken: Handler = async (req, env) => {
   if (existing.length >= 20) return err('Maximum 20 sync tokens per account', 429)
 
   const body = await req.json() as { label?: string }
-  const label = body.label ?? 'default'
+  const raw = typeof body.label === 'string' ? body.label.trim() : ''
+  if (!raw) return err('Label is required', 400)
+  const label = raw.slice(0, 64)
   const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
 
   await createSyncToken(env.DB, user.uid, token, label)

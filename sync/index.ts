@@ -45,6 +45,18 @@ if (!WORKER_URL || !SYNC_TOKEN) {
   process.exit(1)
 }
 
+// Reject non-https schemes to prevent accidental data exfiltration
+try {
+  const u = new URL(WORKER_URL)
+  if (u.protocol !== 'https:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') {
+    console.error(`Error: WORKER_URL must use https:// (got ${u.protocol})`)
+    process.exit(1)
+  }
+} catch {
+  console.error('Error: WORKER_URL is not a valid URL')
+  process.exit(1)
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects')
