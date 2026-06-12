@@ -159,7 +159,7 @@ cd Aimprint && npm install`}</pre>
             {/* Token list */}
             {tokens.length > 0 && (
               <div className="space-y-2">
-                {tokens.map(t => (
+                {tokens.filter(t => !newToken || !newToken.startsWith(t.token)).map(t => (
                   <div key={t.token} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
                     <div>
                       <p className="text-sm text-white">{t.label}</p>
