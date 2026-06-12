@@ -1,4 +1,5 @@
 import { verifyFirebaseToken } from './auth'
+import { estimateCost } from './pricing'
 import {
   upsertUser, lookupSyncToken, createSyncToken, listSyncTokens, deleteSyncToken,
   insertTokenRecords, upsertSessionMeta, updateSessionCategory,
@@ -76,8 +77,8 @@ export const handleIngest: Handler = async (req, env) => {
   const userId = userIdOrErr
 
   const body = await req.json() as { records?: TokenRecord[]; sessions?: SessionMeta[] }
-  const rawRecords = body.records ?? []
-  const rawSessions = (body.sessions ?? []).slice(0, 1000)  // defensive cap
+  const rawRecords = (body.records ?? []).slice(0, 1000)
+  const rawSessions = (body.sessions ?? []).slice(0, 1000)
 
   // Sanitize records — drop anything with invalid counts or IDs
   const records = rawRecords
@@ -90,7 +91,24 @@ export const handleIngest: Handler = async (req, env) => {
       typeof r.cache_creation === 'number' && r.cache_creation >= 0
     )
     .map(r => ({
-      ...r,
+      request_id:       r.request_id,
+      session_id:       r.session_id,
+      timestamp:        typeof r.timestamp  === 'string' ? r.timestamp  : '',
+      date:             typeof r.date       === 'string' ? r.date       : '',
+      machine:          typeof r.machine    === 'string' ? r.machine.slice(0, 128)   : '',
+      project:          typeof r.project    === 'string' ? r.project.slice(0, 256)   : '',
+      cwd:              typeof r.cwd        === 'string' ? r.cwd.slice(0, 512)        : undefined,
+      model:            typeof r.model      === 'string' ? r.model.slice(0, 128)     : '',
+      entrypoint:       typeof r.entrypoint === 'string' ? r.entrypoint.slice(0, 256): undefined,
+      git_branch:       typeof r.git_branch === 'string' ? r.git_branch.slice(0, 256): undefined,
+      ticket:           typeof r.ticket     === 'string' ? r.ticket.slice(0, 64)     : undefined,
+      input_tokens:     r.input_tokens,
+      output_tokens:    r.output_tokens,
+      cache_read:       r.cache_read,
+      cache_creation:   r.cache_creation,
+      // recompute server-side — never trust client-supplied cost
+      cost_usd:         estimateCost(typeof r.model === 'string' ? r.model : '', r.input_tokens, r.output_tokens, r.cache_read, r.cache_creation),
+      is_sidechain:     r.is_sidechain ? 1 : 0,
       // Clamp request_category to valid set; unknown/missing values stored as '' (inherits session category)
       request_category: (typeof r.request_category === 'string' && VALID_CATEGORIES.has(r.request_category))
         ? r.request_category
