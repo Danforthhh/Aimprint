@@ -4,11 +4,11 @@
 
 ### npx install + security hardening
 
-**npx aimprint-sync** — no more git clone needed to set up a new machine:
-- Published as standalone npm package `aimprint-sync`
+**npx @danforthh/aimprint-sync** — no more git clone needed to set up a new machine:
+- Published as standalone npm package `@danforthh/aimprint-sync`
 - Config lives in `~/.aimprint` (falls back to `sync/.env` for existing users)
-- Setup: create `~/.aimprint`, run `npx aimprint-sync`
-- Auto-sync hook: `Stop` event, command `npx aimprint-sync`
+- Setup: create `~/.aimprint`, run `npx @danforthh/aimprint-sync`
+- Auto-sync hook: `Stop` event, command `npx @danforthh/aimprint-sync`
 
 **Security fixes** (full audit performed):
 - **Account deletion order fixed (critical)**: D1 data and sync tokens are now deleted first while the JWT is valid, then Firebase account second — prevents orphaned sync tokens that could continue posting after deletion

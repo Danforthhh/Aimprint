@@ -104,7 +104,7 @@ const STEPS = [
   {
     n: '2',
     title: 'Run the sync agent',
-    desc: 'npm install sets everything up. The sync agent runs automatically after every Claude Code response — no manual steps.',
+    desc: 'Create a ~/.aimprint config with your token, then run npx @danforthh/aimprint-sync. Add a one-line hook to automate it after every Claude Code session.',
   },
   {
     n: '3',
@@ -335,7 +335,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       <footer className="border-t border-gray-800/50 px-6 py-8">
         <div className="max-w-6xl mx-auto flex items-center justify-center gap-2 text-gray-600 text-sm">
           <Logo size={18} />
-          <span>Aimprint · Your AI usage footprint · © 2025</span>
+          <span>Aimprint · Your AI usage footprint · © 2026</span>
         </div>
       </footer>
     </div>

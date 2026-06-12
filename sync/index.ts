@@ -4,7 +4,7 @@
  * Scans ~/.claude/projects/, parses JSONL session logs, classifies sessions,
  * and pushes new records to the Aimprint Cloudflare Worker.
  *
- * Usage: npx aimprint-sync
+ * Usage: npx @danforthh/aimprint-sync
  * Config: ~/.aimprint  (WORKER_URL, SYNC_TOKEN)
  */
 

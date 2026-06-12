@@ -148,7 +148,7 @@ export default function SettingsModal({ onClose }: Props) {
                   <p className="text-xs text-gray-500">1. Create <code className="text-gray-300">~/.aimprint</code></p>
                   <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`WORKER_URL=${import.meta.env.VITE_WORKER_URL}\nSYNC_TOKEN=${newToken}`}</pre>
                   <p className="text-xs text-gray-500">2. Test</p>
-                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300">npx aimprint-sync</pre>
+                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300">npx @danforthh/aimprint-sync</pre>
                 </div>
               </div>
             )}

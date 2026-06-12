@@ -19,4 +19,4 @@
 - [ ] Session detail view (per-request token breakdown within a session)
 - [ ] Team view (aggregate dashboard across multiple users)
 - [ ] Improved classification with optional Haiku-based enrichment (opt-in)
-- [ ] npm package for the sync agent (`npx aimprint-sync`)
+- [x] npm package for the sync agent (`npx @danforthh/aimprint-sync`)

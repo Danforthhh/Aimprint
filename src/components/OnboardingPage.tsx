@@ -118,7 +118,7 @@ SYNC_TOKEN=${token || '<paste-your-token-here>'}`}</pre>
           {/* Step 3 */}
           <div className={step < 3 ? 'opacity-40 pointer-events-none' : ''}>
             <h3 className="font-semibold text-white mb-1">Step 3 — Run your first sync</h3>
-            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300">npx aimprint-sync</pre>
+            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300">npx @danforthh/aimprint-sync</pre>
             {step === 3 && (
               <button onClick={() => setStep(4)} className="mt-3 text-sm text-blue-400 hover:text-blue-300">
                 Done → next step
@@ -137,7 +137,7 @@ SYNC_TOKEN=${token || '<paste-your-token-here>'}`}</pre>
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "npx aimprint-sync"
+        "command": "npx @danforthh/aimprint-sync"
       }]
     }]
   }

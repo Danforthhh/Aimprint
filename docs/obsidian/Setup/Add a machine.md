@@ -19,7 +19,7 @@ SYNC_TOKEN=<your-token-from-step-1>
 
 ### 3. Run first sync
 ```bash
-npx aimprint-sync
+npx @danforthh/aimprint-sync
 ```
 
 No install needed — `npx` downloads and runs the package directly.
@@ -33,7 +33,7 @@ Add to `~/.claude/settings.json` to sync after every Claude Code session:
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "npx aimprint-sync"
+        "command": "npx @danforthh/aimprint-sync"
       }]
     }]
   }
