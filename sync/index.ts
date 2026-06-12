@@ -4,25 +4,33 @@
  * Scans ~/.claude/projects/, parses JSONL session logs, classifies sessions,
  * and pushes new records to the Aimprint Cloudflare Worker.
  *
- * Usage: npm run sync
- * Config: sync/.env  (WORKER_URL, SYNC_TOKEN)
+ * Usage: npx aimprint-sync
+ * Config: ~/.aimprint  (WORKER_URL, SYNC_TOKEN)
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import readline from 'node:readline'
-import { fileURLToPath } from 'node:url'
 import { loadCursors, saveCursors } from './cursor'
 import { classify, classifyRequest, type ClassifyInput, type ToolCounts } from './classifier'
 
 // ── Load env ──────────────────────────────────────────────────────────────────
+// Check ~/.aimprint first (npx usage), fall back to sync/.env (git clone usage)
 
-const envFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '.env')
-if (fs.existsSync(envFile)) {
-  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.+)$/)
-    if (m) process.env[m[1]] = m[2].trim()
+const ALLOWED_ENV_KEYS = new Set(['WORKER_URL', 'SYNC_TOKEN'])
+
+const envCandidates = [
+  path.join(os.homedir(), '.aimprint'),
+  path.join(process.cwd(), 'sync', '.env'),
+]
+for (const f of envCandidates) {
+  if (fs.existsSync(f)) {
+    for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
+      const m = line.match(/^([A-Z_]+)=(.+)$/)
+      if (m && ALLOWED_ENV_KEYS.has(m[1]) && !process.env[m[1]]) process.env[m[1]] = m[2].trim()
+    }
+    break
   }
 }
 
@@ -30,13 +38,19 @@ const WORKER_URL = process.env['WORKER_URL']
 const SYNC_TOKEN = process.env['SYNC_TOKEN']
 
 if (!WORKER_URL || !SYNC_TOKEN) {
-  console.error('Error: WORKER_URL and SYNC_TOKEN must be set in sync/.env')
+  console.error('Error: WORKER_URL and SYNC_TOKEN are required.')
+  console.error('Create ~/.aimprint with:')
+  console.error('  WORKER_URL=https://your-worker.workers.dev')
+  console.error('  SYNC_TOKEN=your-sync-token')
   process.exit(1)
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects')
+const REAL_PROJECTS_DIR = (() => {
+  try { return fs.realpathSync(CLAUDE_PROJECTS_DIR) } catch { return CLAUDE_PROJECTS_DIR }
+})()
 const MACHINE = os.hostname()
 const BATCH_SIZE = 100
 
@@ -336,6 +350,10 @@ async function main() {
     for (const file of fs.readdirSync(fullDir)) {
       if (!file.endsWith('.jsonl')) continue
       const filePath = path.join(fullDir, file)
+      try {
+        const realFilePath = fs.realpathSync(filePath)
+        if (!realFilePath.startsWith(REAL_PROJECTS_DIR + path.sep)) continue
+      } catch { continue }
       const offset = cursors[filePath] ?? 0
 
       try {

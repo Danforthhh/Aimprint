@@ -1,0 +1,30 @@
+{
+  "name": "aimprint-sync",
+  "version": "1.0.0",
+  "description": "Sync Claude Code token logs to your Aimprint dashboard",
+  "type": "commonjs",
+  "bin": {
+    "aimprint-sync": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Danforthhh/Aimprint"
+  },
+  "keywords": ["claude", "claude-code", "token", "usage", "tracker"],
+  "license": "MIT"
+}

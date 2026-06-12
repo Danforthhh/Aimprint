@@ -385,7 +385,10 @@ export async function queryAgentCalls(
   return { agent_calls: row?.agent_calls ?? 0, sessions_with_agents: row?.sessions_with_agents ?? 0 }
 }
 
+const DISTINCT_COL_ALLOWLIST = new Set(['project', 'model', 'machine'])
+
 export async function queryDistinct(db: D1Database, userId: string, col: 'project' | 'model' | 'machine') {
+  if (!DISTINCT_COL_ALLOWLIST.has(col)) throw new Error(`Invalid column: ${col}`)
   const result = await db.prepare(
     `SELECT DISTINCT ${col} AS val FROM token_usage WHERE user_id = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`
   ).bind(userId).all<{ val: string }>()

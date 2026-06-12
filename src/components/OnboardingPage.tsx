@@ -102,12 +102,12 @@ export default function OnboardingPage({ onDone }: Props) {
 
           {/* Step 2 */}
           <div className={step < 2 ? 'opacity-40 pointer-events-none' : ''}>
-            <h3 className="font-semibold text-white mb-1">Step 2 — Install the sync agent</h3>
-            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/Danforthhh/Aimprint
-cd Aimprint/sync
-cp .env.example .env
-# Edit .env — paste your SYNC_TOKEN and set WORKER_URL
-npm install`}</pre>
+            <h3 className="font-semibold text-white mb-1">Step 2 — Create config file</h3>
+            <p className="text-sm text-gray-400 mb-2">
+              Create <code className="text-gray-300">~/.aimprint</code> with your token and worker URL:
+            </p>
+            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto">{`WORKER_URL=${import.meta.env.VITE_WORKER_URL}
+SYNC_TOKEN=${token || '<paste-your-token-here>'}`}</pre>
             {step === 2 && (
               <button onClick={() => setStep(3)} className="mt-3 text-sm text-blue-400 hover:text-blue-300">
                 Done → next step
@@ -118,7 +118,7 @@ npm install`}</pre>
           {/* Step 3 */}
           <div className={step < 3 ? 'opacity-40 pointer-events-none' : ''}>
             <h3 className="font-semibold text-white mb-1">Step 3 — Run your first sync</h3>
-            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300">npm run sync</pre>
+            <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300">npx aimprint-sync</pre>
             {step === 3 && (
               <button onClick={() => setStep(4)} className="mt-3 text-sm text-blue-400 hover:text-blue-300">
                 Done → next step
@@ -130,20 +130,20 @@ npm install`}</pre>
           <div className={step < 4 ? 'opacity-40 pointer-events-none' : ''}>
             <h3 className="font-semibold text-white mb-1">Step 4 — Automate (optional)</h3>
             <p className="text-sm text-gray-400 mb-2">
-              Add to <code className="text-gray-300">~/.claude/settings.json</code> to sync at every Claude Code session start:
+              Add to <code className="text-gray-300">~/.claude/settings.json</code> to sync automatically after every Claude Code session:
             </p>
             <pre className="bg-gray-800 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto">{`{
   "hooks": {
-    "SessionStart": [{
+    "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "npm run sync --prefix ~/aimprint-agent"
+        "command": "npx aimprint-sync"
       }]
     }]
   }
 }`}</pre>
             <p className="text-sm text-gray-400 mt-3">
-              <strong className="text-white">Multiple laptops:</strong> run steps 2–3 on each additional machine using the same sync token.
+              <strong className="text-white">Multiple laptops:</strong> repeat steps 2–3 on each machine using the same token.
               The dashboard will show a "machine" filter automatically.
             </p>
           </div>

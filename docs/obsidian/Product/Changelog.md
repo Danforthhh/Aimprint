@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.3.0 — 2026-06
+
+### npx install + security hardening
+
+**npx aimprint-sync** — no more git clone needed to set up a new machine:
+- Published as standalone npm package `aimprint-sync`
+- Config lives in `~/.aimprint` (falls back to `sync/.env` for existing users)
+- Setup: create `~/.aimprint`, run `npx aimprint-sync`
+- Auto-sync hook: `Stop` event, command `npx aimprint-sync`
+
+**Security fixes** (full audit performed):
+- **Account deletion order fixed (critical)**: D1 data and sync tokens are now deleted first while the JWT is valid, then Firebase account second — prevents orphaned sync tokens that could continue posting after deletion
+- **Sync token delete: minimum prefix length**: 8–64 chars enforced, preventing ambiguous 1-char prefix matches
+- **Ingest `first_message`/`tool_summary` bounded**: capped at 500/1000 chars at the worker; `tool_summary` validated as JSON before storage
+- **Per-user token limit**: max 20 sync tokens per account
+- **Env parser whitelist**: `~/.aimprint` parser now only accepts `WORKER_URL` and `SYNC_TOKEN` keys — prevents `NODE_OPTIONS` injection
+- **Symlink traversal guard**: JSONL scan resolves real paths and rejects files outside `~/.claude/projects/`
+- **SQL column runtime allowlist**: `queryDistinct` now asserts column name at runtime (defence-in-depth over TypeScript types)
+- **CSV `Cache-Control: no-store`**: prevents proxy/browser caching of personal usage exports
+
 ## v1.2.0 — 2026-06
 
 ### Password reset + repo URL fix

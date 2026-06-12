@@ -55,21 +55,20 @@ export default function SettingsModal({ onClose }: Props) {
     setDeleting(true)
     setError('')
     try {
-      // 1. Delete the Firebase Auth user FIRST — fails fast if re-auth is needed.
-      //    This prevents the worse failure mode of D1 data being erased while the
-      //    Firebase account survives (user could log back in to an empty dashboard).
-      await deleteUser(user)
-      // 2. D1 data only deleted after Firebase confirms success.
-      //    If this fails the Firebase account is gone so the data is orphaned but
-      //    inaccessible — a hygiene issue, not a security or data-loss issue.
+      // 1. Delete D1 data first while the JWT is still valid — revokes all sync tokens
+      //    so no machine can continue posting data after deletion.
       await deleteAccount()
+      // 2. Delete the Firebase account second. If this fails (requires-recent-login),
+      //    usage data and sync tokens are already gone; the Firebase identity is the
+      //    only thing remaining and can be cleaned up on next sign-in.
+      await deleteUser(user)
       // Auth listener in App.tsx will detect the Firebase sign-out and redirect.
     } catch (e) {
       setDeleting(false)
       setDeleteConfirm(false)
       const msg = e instanceof Error ? e.message : 'Failed to delete account'
       if (msg.includes('requires-recent-login')) {
-        setError('Please sign out and sign back in before deleting your account.')
+        setError('Please sign out and sign back in, then try deleting your account again.')
       } else {
         setError(msg)
       }
@@ -146,12 +145,10 @@ export default function SettingsModal({ onClose }: Props) {
                 </div>
                 <div className="border-t border-gray-700 pt-3 space-y-2">
                   <p className="text-xs text-gray-400 font-medium">Setup on the new machine:</p>
-                  <p className="text-xs text-gray-500">1. Clone &amp; install</p>
-                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`git clone https://github.com/Danforthhh/Aimprint
-cd Aimprint && npm install`}</pre>
-                  <p className="text-xs text-gray-500">2. Create <code className="text-gray-300">sync/.env</code></p>
+                  <p className="text-xs text-gray-500">1. Create <code className="text-gray-300">~/.aimprint</code></p>
                   <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto">{`WORKER_URL=${import.meta.env.VITE_WORKER_URL}\nSYNC_TOKEN=${newToken}`}</pre>
-                  <p className="text-xs text-gray-500">3. Sync runs automatically after every Claude Code response — no further setup needed.</p>
+                  <p className="text-xs text-gray-500">2. Test</p>
+                  <pre className="bg-gray-900 rounded p-2 text-xs text-gray-300">npx aimprint-sync</pre>
                 </div>
               </div>
             )}

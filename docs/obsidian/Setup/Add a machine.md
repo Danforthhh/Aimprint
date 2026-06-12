@@ -1,7 +1,7 @@
 # Adding a Machine
 
 ## Prerequisites
-- Node.js 22+ installed
+- Node.js 18+ installed
 - Claude Code installed and used at least once (creates ~/.claude/projects/)
 - A deployed Aimprint instance (see [[Deploy]])
 
@@ -10,15 +10,8 @@
 ### 1. Get a sync token
 Log into the Aimprint dashboard → Settings → Generate Sync Token → copy the token (shown once).
 
-### 2. Install the sync agent
-```bash
-git clone https://github.com/Danforthhh/Aimprint
-cd Aimprint
-npm install
-cp sync/.env.example sync/.env
-```
-
-Edit `sync/.env`:
+### 2. Create config file
+Create `~/.aimprint` with two lines:
 ```
 WORKER_URL=https://aimprint.vin-bories.workers.dev
 SYNC_TOKEN=<your-token-from-step-1>
@@ -26,18 +19,31 @@ SYNC_TOKEN=<your-token-from-step-1>
 
 ### 3. Run first sync
 ```bash
-npm run sync
+npx aimprint-sync
 ```
 
-### 4. Done — sync is already automated
+No install needed — `npx` downloads and runs the package directly.
 
-`npm install` (step 2) automatically created `.claude/settings.local.json` with a `Stop` hook. After every Claude Code response, the sync agent runs in the background and pushes any new records to your dashboard.
+### 4. Automate (optional)
+Add to `~/.claude/settings.json` to sync after every Claude Code session:
 
-You don't need to do anything. To verify, open the Aimprint dashboard after your next Claude Code session — your machine should appear in the "By machine" filter.
-
-> **Note:** `.claude/settings.local.json` is gitignored — it belongs to this machine only and will never be committed.
+```json
+{
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "npx aimprint-sync"
+      }]
+    }]
+  }
+}
+```
 
 ## Multiple laptops, same account
-Use the same sync token on all machines. They'll all appear as separate entries in the "machine" filter of the dashboard (identified by hostname).
+Repeat steps 2–3 on each machine using the same sync token. They'll all appear as separate entries in the "machine" filter (identified by hostname).
 
 To manage machines independently, generate a separate token per machine with a descriptive label (e.g. "Work MacBook", "Home laptop").
+
+## Legacy: git clone setup
+If you previously cloned the repo, the agent still works — it falls back to `sync/.env` automatically. No migration needed.

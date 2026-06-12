@@ -97,10 +97,15 @@ export const handleIngest: Handler = async (req, env) => {
         : '',
     }))
 
-  // Sanitize sessions — clamp to valid categories
+  // Sanitize sessions — clamp to valid categories, bound free-text fields
   const sessions = rawSessions.map(s => ({
     ...s,
     category: VALID_CATEGORIES.has(s.category) ? s.category : 'other',
+    first_message: typeof s.first_message === 'string' ? s.first_message.slice(0, 500) : undefined,
+    tool_summary: (() => {
+      if (typeof s.tool_summary !== 'string') return undefined
+      try { JSON.parse(s.tool_summary); return s.tool_summary.slice(0, 1000) } catch { return undefined }
+    })(),
   }))
 
   const { inserted, skipped } = await insertTokenRecords(env.DB, userId, records)
@@ -254,6 +259,9 @@ export const handleCreateSyncToken: Handler = async (req, env) => {
   const user = await requireFirebaseAuth(req, env)
   if (user instanceof Response) return user
 
+  const existing = await listSyncTokens(env.DB, user.uid)
+  if (existing.length >= 20) return err('Maximum 20 sync tokens per account', 429)
+
   const body = await req.json() as { label?: string }
   const label = body.label ?? 'default'
   const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
@@ -277,6 +285,7 @@ export const handleDeleteSyncToken: Handler = async (req, env, params) => {
 
   const tokenPrefix = params?.prefix
   if (!tokenPrefix) return err('Missing token prefix')
+  if (tokenPrefix.length < 8 || tokenPrefix.length > 64) return err('Token prefix must be 8–64 characters')
 
   const tokens = await listSyncTokens(env.DB, user.uid)
   const match = tokens.find(t => t.token.startsWith(tokenPrefix))
@@ -342,6 +351,7 @@ export const handleExportCsv: Handler = async (req, env) => {
     headers: {
       'Content-Type': 'text/csv',
       'Content-Disposition': 'attachment; filename="aimprint-export.csv"',
+      'Cache-Control': 'no-store',
     },
   })
 }
