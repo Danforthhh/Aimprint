@@ -4,7 +4,7 @@
   "description": "Sync Claude Code token logs to your Aimprint dashboard",
   "type": "commonjs",
   "bin": {
-    "aimprint-sync": "./dist/index.js"
+    "aimprint-sync": "dist/index.js"
   },
   "files": [
     "dist"
@@ -23,8 +23,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Danforthhh/Aimprint"
+    "url": "git+https://github.com/Danforthhh/Aimprint.git"
   },
-  "keywords": ["claude", "claude-code", "token", "usage", "tracker"],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "token",
+    "usage",
+    "tracker"
+  ],
   "license": "MIT"
 }
