@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.4.0 — 2026-06
+
+### Security audit #2 + bug fixes
+
+**Bug fixes:**
+- **Worker bare 500 with no CORS headers**: unhandled exceptions in route handlers caused Cloudflare to return its own error response with zero custom headers, making the browser report a CORS error instead of the real problem. Added top-level try/catch to the fetch handler — all errors now return CORS-compliant JSON `{"error":"..."}`.
+- **`queryAgentCalls` SQL scope bug**: outer SELECT referenced `sm.tool_summary` but `sm` is only defined in the inner subquery. Fixed to reference the column as `tool_summary` (the name the subquery exposes).
+
+**Security hardening (audit #2):**
+- **HSTS**: added `Strict-Transport-Security: max-age=31536000; includeSubDomains` to all Worker responses
+- **Permissions-Policy**: added `camera=(), microphone=(), geolocation=()` to all Worker responses
+- **CSP connect-src narrowed**: replaced wildcard `*.googleapis.com` and `*.workers.dev` with exact endpoints (`identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `firebaseappcheck.googleapis.com`, `firebaseinstallations.googleapis.com`, `aimprint.vin-bories.workers.dev`); removed unused `*.cloudfunctions.net` and `wss://*.firebaseio.com`
+- **Sync token label sanitization**: labels validated against printable ASCII allowlist; `<`, `>`, `&` rejected server-side to prevent stored XSS
+- **CSV export hardened**: row cap lowered to 2,000; `days=0` (all-time) no longer accepted — prevents Worker timeout on large datasets
+- **Build-time env assertions**: `vite.config.ts` now throws if required env vars (`VITE_WORKER_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`) are missing in production builds
+- **App Check warning**: explicit `console.error` if `VITE_RECAPTCHA_SITE_KEY` is missing in a production build instead of silently skipping
+- **`queryByDimension` allowlist**: replaced `Object.values().includes()` check with `hasOwnProperty` to prevent prototype pollution bypassing the column allowlist
+- **Password minimum**: new registrations require 8 characters (up from Firebase's default 6); login is not affected
+
 ## v1.3.0 — 2026-06
 
 ### npx install + security hardening

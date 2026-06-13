@@ -48,16 +48,9 @@ Go to **[danforthhh.github.io/Aimprint](https://danforthhh.github.io/Aimprint/)*
 ### 2. Get a sync token
 Settings → **Generate Sync Token** → copy it (shown once).
 
-### 3. Install the sync agent
+### 3. Configure the sync agent
 
-```bash
-git clone https://github.com/Danforthhh/Aimprint
-cd Aimprint
-npm install
-cp sync/.env.example sync/.env
-```
-
-Edit `sync/.env`:
+Create `~/.aimprint` with two lines:
 ```
 WORKER_URL=https://aimprint.vin-bories.workers.dev
 SYNC_TOKEN=<your-token>
@@ -65,22 +58,23 @@ SYNC_TOKEN=<your-token>
 
 ### 4. Run your first sync
 
+No install needed — `npx` downloads and runs the agent directly:
+
 ```bash
-npm run sync
+npx @danforthh/aimprint-sync
 ```
 
 ### 5. Automate (optional)
 
-Add to `~/.claude/settings.json` to sync at every session start:
+Add to `~/.claude/settings.json` to sync automatically after every Claude Code session:
 
 ```json
 {
   "hooks": {
-    "SessionStart": [{
+    "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "npm run sync --prefix /path/to/Aimprint >> ~/.claude/aimprint-sync.log 2>&1 &",
-        "timeout": 30
+        "command": "npx @danforthh/aimprint-sync"
       }]
     }]
   }
@@ -88,7 +82,9 @@ Add to `~/.claude/settings.json` to sync at every session start:
 ```
 
 ### Multiple machines
-Use the same sync token on every machine. All machines merge under your account and appear separately in the "machine" filter.
+Repeat steps 2–4 on each machine using the same sync token. All machines appear separately in the "machine" filter.
+
+> **Existing git clone users:** the agent falls back to `sync/.env` automatically — no migration needed.
 
 ---
 

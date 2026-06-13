@@ -28,6 +28,21 @@ After initial implementation and deployment, a full security review was conducte
 
 **Reason:** With 64-char random hex tokens, the probability of two tokens sharing the same 8-char prefix is 1/4,294,967,296. This is acceptable for personal/small-team usage. The simplicity of prefix-based deletion outweighs the theoretical collision risk.
 
+### Worker fetch handler wraps all routes in try/catch
+**Decision:** The top-level `fetch` handler catches all unhandled exceptions and returns a CORS-compliant `{"error":"..."}` JSON response with status 500.
+
+**Reason:** Without this, any thrown exception causes Cloudflare to return its own bare 500 with no custom headers. The browser interprets the missing `Access-Control-Allow-Origin` as a CORS policy violation — hiding the real error and making debugging very hard.
+
+### CSP connect-src uses exact endpoints, not wildcards
+**Decision:** `connect-src` lists exact Google/Firebase API hostnames instead of `*.googleapis.com` and `*.workers.dev`.
+
+**Reason:** A wildcard `*.workers.dev` would allow XSS to exfiltrate data to any attacker-controlled Cloudflare Worker. Exact hostnames (`identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `firebaseappcheck.googleapis.com`, `firebaseinstallations.googleapis.com`, `aimprint.vin-bories.workers.dev`) limit blast radius to the endpoints the app actually uses.
+
+### CSV export requires days > 0
+**Decision:** The `/api/export/csv` endpoint clamps `days` to a minimum of 1, refusing all-time exports, and caps rows at 2,000.
+
+**Reason:** `days=0` (all-time) with 5,000 rows risks Worker CPU timeout (50ms on free tier). Legitimate export use cases are window-bounded; all-time can be achieved with a large day count.
+
 ### Session categories clamped on ingest (not rejected)
 **Decision:** If the sync agent sends an unrecognized category, it is silently clamped to `'other'` rather than rejecting the entire batch.
 
