@@ -467,6 +467,15 @@ export async function queryCategoryTrend(
   return res.results ?? []
 }
 
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+export async function listAllUsers(db: D1Database) {
+  const result = await db.prepare(
+    'SELECT user_id, email, created_at FROM users ORDER BY created_at DESC'
+  ).all<{ user_id: string; email: string; created_at: string }>()
+  return result.results
+}
+
 // ─── Account deletion ─────────────────────────────────────────────────────────
 
 /**

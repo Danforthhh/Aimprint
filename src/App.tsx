@@ -4,7 +4,7 @@ import { auth } from './services/firebase'
 import {
   fetchUsage, fetchCategories, fetchSidechain,
   fetchBreakdown, fetchSessions, fetchFilters, downloadCsv,
-  fetchCategoryTrend,
+  fetchCategoryTrend, fetchAdminUsers,
 } from './services/api'
 import type {
   FilterState, FiltersData, DayUsage, Totals,
@@ -30,6 +30,9 @@ import TopSessionsCard    from './components/TopSessionsCard'
 import SessionTable       from './components/SessionTable'
 
 const EMPTY_TOTALS: Totals = { input: 0, output: 0, cache_read: 0, cache_creation: 0, cost_usd: 0, requests: 0, sessions: 0 }
+const ADMIN_EMAIL = 'vin.bories@gmail.com'
+
+interface AdminUser { user_id: string; email: string }
 
 export default function App() {
   const [user, setUser]         = useState<User | null>(null)
@@ -37,6 +40,10 @@ export default function App() {
   const [onboarding, setOnboarding]   = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
+
+  // Admin
+  const [adminUsers,  setAdminUsers]  = useState<AdminUser[]>([])
+  const [viewAsUser,  setViewAsUser]  = useState<AdminUser | null>(null)
 
   // Filter state
   const [filters, setFilters]         = useState<FilterState>(DEFAULT_FILTERS)
@@ -74,6 +81,12 @@ export default function App() {
             if (f.machines.length === 0) setOnboarding(true)
           })
           .catch(err => console.warn('fetchFilters on auth:', err))
+
+        if (u.email === ADMIN_EMAIL) {
+          fetchAdminUsers()
+            .then(r => setAdminUsers(r.users))
+            .catch(err => console.warn('fetchAdminUsers:', err))
+        }
       }
     })
   }, [])
@@ -82,18 +95,19 @@ export default function App() {
     if (!user) return
     setLoading(true)
     setError('')
+    const viewAs = viewAsUser?.user_id
     try {
       const [usage, cats, side, proj, mod, mach, sess, top, fdata, trend] = await Promise.all([
-        fetchUsage(filters),
-        fetchCategories(filters),
-        fetchSidechain(filters),
-        fetchBreakdown('project', filters.days),
-        fetchBreakdown('model',   filters.days),
-        fetchBreakdown('machine', filters.days),
-        fetchSessions(filters),
-        fetchSessions(filters, 10, 0, 'cost_desc'),
-        fetchFilters(),
-        fetchCategoryTrend(filters),
+        fetchUsage(filters, viewAs),
+        fetchCategories(filters, viewAs),
+        fetchSidechain(filters, viewAs),
+        fetchBreakdown('project', filters.days, viewAs),
+        fetchBreakdown('model',   filters.days, viewAs),
+        fetchBreakdown('machine', filters.days, viewAs),
+        fetchSessions(filters, 50, 0, 'recent', viewAs),
+        fetchSessions(filters, 10, 0, 'cost_desc', viewAs),
+        fetchFilters(viewAs),
+        fetchCategoryTrend(filters, viewAs),
       ])
       setDaily(usage.daily)
       setCategoryTrend(trend.data)
@@ -115,7 +129,7 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }, [user, filters])
+  }, [user, filters, viewAsUser])
 
   useEffect(() => {
     if (user && !onboarding) loadData()
@@ -186,9 +200,13 @@ export default function App() {
           filters={filters}
           filtersData={filtersData}
           onChange={setFilters}
-          onExport={() => downloadCsv(filters).catch(console.error)}
+          onExport={() => downloadCsv(filters, viewAsUser?.user_id).catch(console.error)}
           onRefresh={loadData}
           loading={loading}
+          isAdmin={user?.email === ADMIN_EMAIL}
+          adminUsers={adminUsers}
+          viewAsUserId={viewAsUser?.user_id}
+          onViewAsChange={setViewAsUser}
         />
 
         {error && (

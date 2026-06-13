@@ -4,13 +4,14 @@ import {
   handleSessions, handleUpdateCategory, handleFilters,
   handleCategoryTrend,
   handleCreateSyncToken, handleListSyncTokens, handleDeleteSyncToken,
-  handleExportCsv, handleDeleteAccount,
+  handleExportCsv, handleDeleteAccount, handleAdminUsers,
 } from './routes'
 import type { D1Database } from './db'
 
 interface Env {
   DB: D1Database
   FIREBASE_PROJECT_ID: string
+  ADMIN_EMAIL: string
 }
 
 const ALLOWED_ORIGINS = [
@@ -85,6 +86,8 @@ export default {
             response = await handleUpdateCategory(request, env, { id: sessionCatMatch[1] })
           }
 
+          // ── Admin ──────────────────────────────────────────────────────────
+          else if (method === 'GET'    && path === '/api/admin/users')  response = await handleAdminUsers(request, env)
           // ── Sync token management ──────────────────────────────────────────
           else if (method === 'POST'   && path === '/api/sync-tokens') response = await handleCreateSyncToken(request, env)
           else if (method === 'GET'    && path === '/api/sync-tokens') response = await handleListSyncTokens(request, env)

@@ -1,6 +1,8 @@
 import type { FilterState, FiltersData } from '../types'
 import { ALL_CATEGORIES, CATEGORY_LABELS } from '../types'
 
+interface AdminUser { user_id: string; email: string }
+
 interface Props {
   filters: FilterState
   filtersData: FiltersData
@@ -8,6 +10,10 @@ interface Props {
   onExport: () => void
   onRefresh: () => void
   loading: boolean
+  isAdmin?: boolean
+  adminUsers?: AdminUser[]
+  viewAsUserId?: string
+  onViewAsChange?: (u: AdminUser | null) => void
 }
 
 const DAYS_OPTIONS = [
@@ -41,13 +47,37 @@ function Select({
   )
 }
 
-export default function Filters({ filters, filtersData, onChange, onExport, onRefresh, loading }: Props) {
+export default function Filters({ filters, filtersData, onChange, onExport, onRefresh, loading, isAdmin, adminUsers = [], viewAsUserId, onViewAsChange }: Props) {
   function set<K extends keyof FilterState>(key: K, value: FilterState[K]) {
     onChange({ ...filters, [key]: value })
   }
 
   return (
     <div className="flex flex-wrap items-end gap-3 p-4 bg-gray-900 border border-gray-800 rounded-xl">
+      {/* Admin: viewing-as selector */}
+      {isAdmin && adminUsers.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-blue-400 uppercase tracking-wider font-semibold">Viewing as</span>
+          <select
+            value={viewAsUserId ?? 'self'}
+            onChange={e => {
+              if (e.target.value === 'self') {
+                onViewAsChange?.(null)
+              } else {
+                const u = adminUsers.find(u => u.user_id === e.target.value)
+                if (u) onViewAsChange?.(u)
+              }
+            }}
+            className="bg-blue-900/40 border border-blue-700 rounded-lg px-2 py-1.5 text-sm text-blue-200 focus:outline-none focus:border-blue-400"
+          >
+            <option value="self">Myself</option>
+            {adminUsers.map(u => (
+              <option key={u.user_id} value={u.user_id}>{u.email}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Date range — pill buttons */}
       <div className="flex flex-col gap-1">
         <span className="text-xs text-gray-500 uppercase tracking-wider">Period</span>

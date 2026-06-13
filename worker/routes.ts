@@ -5,7 +5,7 @@ import {
   insertTokenRecords, upsertSessionMeta, updateSessionCategory,
   queryDailyUsage, queryTotals, queryRequestCategories, querySubagent,
   queryDailyAgentCalls, queryAgentCalls, queryByDimension, querySessions, queryDistinct, queryTickets,
-  queryCategoryTrend,
+  queryCategoryTrend, listAllUsers,
   deleteUserAccount,
   type D1Database, type TokenRecord, type SessionMeta, type UsageFilters,
 } from './db'
@@ -13,6 +13,7 @@ import {
 interface Env {
   DB: D1Database
   FIREBASE_PROJECT_ID: string
+  ADMIN_EMAIL: string
 }
 
 type Handler = (req: Request, env: Env, params?: Record<string, string>) => Promise<Response>
@@ -44,6 +45,20 @@ function json(data: unknown, status = 200): Response {
 
 function err(msg: string, status = 400): Response {
   return json({ error: msg }, status)
+}
+
+// If the requester is the admin and a ?viewAs=<userId> param is present, return that
+// userId instead of the requester's own uid. Non-admins always get their own uid.
+function resolveUserId(
+  user: { uid: string; email: string },
+  url: URL,
+  adminEmail: string,
+): string {
+  if (user.email === adminEmail) {
+    const viewAs = url.searchParams.get('viewAs')
+    if (viewAs && viewAs.length > 0) return viewAs
+  }
+  return user.uid
 }
 
 // ─── Auth middleware ──────────────────────────────────────────────────────────
@@ -151,7 +166,7 @@ export const handleUsage: Handler = async (req, env) => {
   const category = url.searchParams.get('category') ?? 'all'
   const ticket   = url.searchParams.get('ticket') ?? 'all'
 
-  const f = { userId: user.uid, days, project, model, machine, category, ticket }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days, project, model, machine, category, ticket }
   const [daily, totals, agentCalls, dailyAgentCalls] = await Promise.all([
     queryDailyUsage(env.DB, f),
     queryTotals(env.DB, f),
@@ -183,7 +198,7 @@ export const handleCategories: Handler = async (req, env) => {
   const model   = url.searchParams.get('model')   ?? 'all'
   const machine = url.searchParams.get('machine') ?? 'all'
   const ticket  = url.searchParams.get('ticket')  ?? 'all'
-  const f = { userId: user.uid, days, project, model, machine, ticket }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days, project, model, machine, ticket }
   const categories = await queryRequestCategories(env.DB, f)
   return json({ categories })
 }
@@ -200,7 +215,7 @@ export const handleSidechain: Handler = async (req, env) => {
   const model   = url.searchParams.get('model')   ?? 'all'
   const machine = url.searchParams.get('machine') ?? 'all'
   const ticket  = url.searchParams.get('ticket')  ?? 'all'
-  const f = { userId: user.uid, days, project, model, machine, ticket }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days, project, model, machine, ticket }
   const data = await querySubagent(env.DB, f)
   return json({ data })
 }
@@ -216,7 +231,7 @@ export const handleBreakdown: Handler = async (req, env, params) => {
 
   const url = new URL(req.url)
   const days = clampDays(url.searchParams.get('days') ?? '30')
-  const f = { userId: user.uid, days }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days }
 
   if (dim === 'ticket') {
     const data = await queryByDimension(env.DB, f, 'ticket')
@@ -244,7 +259,7 @@ export const handleSessions: Handler = async (req, env) => {
   const sortRaw  = url.searchParams.get('sort') ?? 'recent'
   const sort     = sortRaw === 'cost_desc' ? 'cost_desc' : 'recent'
 
-  const f = { userId: user.uid, days, project, model, machine, category, ticket }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days, project, model, machine, category, ticket }
   const sessions = await querySessions(env.DB, f, limit, offset, sort)
   return json({ sessions })
 }
@@ -272,11 +287,12 @@ export const handleFilters: Handler = async (req, env) => {
   const user = await requireFirebaseAuth(req, env)
   if (user instanceof Response) return user
 
+  const effectiveUserId = resolveUserId(user, new URL(req.url), env.ADMIN_EMAIL)
   const [projects, models, machines, tickets] = await Promise.all([
-    queryDistinct(env.DB, user.uid, 'project'),
-    queryDistinct(env.DB, user.uid, 'model'),
-    queryDistinct(env.DB, user.uid, 'machine'),
-    queryTickets(env.DB, user.uid),
+    queryDistinct(env.DB, effectiveUserId, 'project'),
+    queryDistinct(env.DB, effectiveUserId, 'model'),
+    queryDistinct(env.DB, effectiveUserId, 'machine'),
+    queryTickets(env.DB, effectiveUserId),
   ])
   return json({ projects, models, machines, tickets })
 }
@@ -338,6 +354,16 @@ export const handleDeleteAccount: Handler = async (req, env) => {
   return json({ ok: true })
 }
 
+// ─── GET /api/admin/users ─────────────────────────────────────────────────────
+
+export const handleAdminUsers: Handler = async (req, env) => {
+  const user = await requireFirebaseAuth(req, env)
+  if (user instanceof Response) return user
+  if (user.email !== env.ADMIN_EMAIL) return err('Forbidden', 403)
+  const users = await listAllUsers(env.DB)
+  return json({ users })
+}
+
 // ─── GET /api/category-trend ─────────────────────────────────────────────────
 
 export const handleCategoryTrend: Handler = async (req, env) => {
@@ -351,7 +377,7 @@ export const handleCategoryTrend: Handler = async (req, env) => {
   const machine = url.searchParams.get('machine') ?? 'all'
   const ticket  = url.searchParams.get('ticket')  ?? 'all'
   // Deliberately NOT filtering by category — the trend shows all categories
-  const f = { userId: user.uid, days, project, model, machine, ticket }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days, project, model, machine, ticket }
   const data = await queryCategoryTrend(env.DB, f)
   return json({ data })
 }
@@ -365,7 +391,7 @@ export const handleExportCsv: Handler = async (req, env) => {
   const url = new URL(req.url)
   const rawDays = clampDays(url.searchParams.get('days') ?? '30')
   if (rawDays === 0) return err('days parameter is required and must be > 0 for CSV export', 400)
-  const f = { userId: user.uid, days: rawDays }
+  const f = { userId: resolveUserId(user, url, env.ADMIN_EMAIL), days: rawDays }
 
   const CAP = 2000
   const sessions = await querySessions(env.DB, f, CAP, 0)

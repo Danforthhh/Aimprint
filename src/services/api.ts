@@ -31,7 +31,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
-function qs(f: FilterState): string {
+function qs(f: FilterState, viewAs?: string): string {
   const p = new URLSearchParams({
     days:     String(f.days),
     project:  f.project,
@@ -40,12 +40,13 @@ function qs(f: FilterState): string {
     category: f.category,
     ticket:   f.ticket,
   })
+  if (viewAs) p.set('viewAs', viewAs)
   return `?${p}`
 }
 
 // ── Endpoints ─────────────────────────────────────────────────────────────────
 
-export async function fetchUsage(f: FilterState): Promise<{
+export async function fetchUsage(f: FilterState, viewAs?: string): Promise<{
   daily: DayUsage[]
   totals: Totals
   totalsPrev: Totals
@@ -53,25 +54,28 @@ export async function fetchUsage(f: FilterState): Promise<{
   sessions_with_agents: number
   daily_agent_calls: { date: string; agent_calls: number }[]
 }> {
-  return apiFetch(`/api/usage${qs(f)}`)
+  return apiFetch(`/api/usage${qs(f, viewAs)}`)
 }
 
-export async function fetchCategories(f: FilterState): Promise<{ categories: CategoryItem[] }> {
-  return apiFetch(`/api/categories${qs(f)}`)
+export async function fetchCategories(f: FilterState, viewAs?: string): Promise<{ categories: CategoryItem[] }> {
+  return apiFetch(`/api/categories${qs(f, viewAs)}`)
 }
 
 export async function fetchCategoryTrend(
   f: FilterState,
+  viewAs?: string,
 ): Promise<{ data: Array<{ week: string; category: string; tokens: number; cost_usd: number }> }> {
-  return apiFetch(`/api/category-trend${qs(f)}`)
+  return apiFetch(`/api/category-trend${qs(f, viewAs)}`)
 }
 
-export async function fetchSidechain(f: FilterState): Promise<{ data: SubagentItem[] }> {
-  return apiFetch(`/api/sidechain${qs(f)}`)
+export async function fetchSidechain(f: FilterState, viewAs?: string): Promise<{ data: SubagentItem[] }> {
+  return apiFetch(`/api/sidechain${qs(f, viewAs)}`)
 }
 
-export async function fetchBreakdown(dim: string, days: number): Promise<{ data: DimItem[] }> {
-  return apiFetch(`/api/breakdown/${dim}?days=${days}`)
+export async function fetchBreakdown(dim: string, days: number, viewAs?: string): Promise<{ data: DimItem[] }> {
+  const p = new URLSearchParams({ days: String(days) })
+  if (viewAs) p.set('viewAs', viewAs)
+  return apiFetch(`/api/breakdown/${dim}?${p}`)
 }
 
 export async function fetchSessions(
@@ -79,17 +83,24 @@ export async function fetchSessions(
   limit = 50,
   offset = 0,
   sort: 'recent' | 'cost_desc' = 'recent',
+  viewAs?: string,
 ): Promise<{ sessions: Session[] }> {
   const p = new URLSearchParams({
     days: String(f.days), project: f.project, model: f.model,
     machine: f.machine, category: f.category, ticket: f.ticket,
     limit: String(limit), offset: String(offset), sort,
   })
+  if (viewAs) p.set('viewAs', viewAs)
   return apiFetch(`/api/sessions?${p}`)
 }
 
-export async function fetchFilters(): Promise<FiltersData> {
-  return apiFetch('/api/filters')
+export async function fetchFilters(viewAs?: string): Promise<FiltersData> {
+  const p = viewAs ? `?viewAs=${encodeURIComponent(viewAs)}` : ''
+  return apiFetch(`/api/filters${p}`)
+}
+
+export async function fetchAdminUsers(): Promise<{ users: { user_id: string; email: string; created_at: string }[] }> {
+  return apiFetch('/api/admin/users')
 }
 
 export async function updateSessionCategory(sessionId: string, category: string): Promise<void> {
@@ -111,9 +122,9 @@ export async function deleteSyncToken(idOrPrefix: string): Promise<void> {
   await apiFetch(`/api/sync-tokens/${encodeURIComponent(idOrPrefix)}`, { method: 'DELETE' })
 }
 
-export async function downloadCsv(f: FilterState): Promise<void> {
+export async function downloadCsv(f: FilterState, viewAs?: string): Promise<void> {
   const token = await getToken()
-  const res = await fetch(`${WORKER}/api/export/csv${qs(f)}`, {
+  const res = await fetch(`${WORKER}/api/export/csv${qs(f, viewAs)}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error('CSV export failed')
