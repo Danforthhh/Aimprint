@@ -87,15 +87,12 @@ export async function deleteSyncToken(db: D1Database, userId: string, idOrPrefix
     await db.prepare('DELETE FROM sync_tokens WHERE token_id = ? AND user_id = ?')
       .bind(idOrPrefix, userId).run()
   } else {
-    // Legacy prefix match for tokens created before hashing
-    const rows = await db.prepare(
-      'SELECT token, token_prefix FROM sync_tokens WHERE user_id = ? AND token_id IS NULL'
-    ).bind(userId).all<{ token: string; token_prefix: string | null }>()
-    const match = rows.results.find(r => (r.token_prefix ?? r.token).startsWith(idOrPrefix))
-    if (match) {
-      await db.prepare('DELETE FROM sync_tokens WHERE token = ? AND user_id = ?')
-        .bind(match.token, userId).run()
-    }
+    // Legacy prefix match — single atomic DELETE avoids TOCTOU between SELECT+DELETE
+    await db.prepare(
+      `DELETE FROM sync_tokens
+       WHERE user_id = ? AND token_id IS NULL
+         AND (token_prefix = ? OR (token_prefix IS NULL AND token LIKE ?))`
+    ).bind(userId, idOrPrefix, idOrPrefix + '%').run()
   }
 }
 
@@ -435,12 +432,13 @@ export async function queryAgentCalls(
   return { agent_calls: row?.agent_calls ?? 0, sessions_with_agents: row?.sessions_with_agents ?? 0 }
 }
 
-const DISTINCT_COL_ALLOWLIST = new Set(['project', 'model', 'machine'])
+const SAFE_DISTINCT_COLS = { project: 'project', model: 'model', machine: 'machine' } as const
 
 export async function queryDistinct(db: D1Database, userId: string, col: 'project' | 'model' | 'machine') {
-  if (!DISTINCT_COL_ALLOWLIST.has(col)) return []
+  const safeCol = SAFE_DISTINCT_COLS[col]
+  if (!safeCol) return []
   const result = await db.prepare(
-    `SELECT DISTINCT ${col} AS val FROM token_usage WHERE user_id = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col} LIMIT 500`
+    `SELECT DISTINCT ${safeCol} AS val FROM token_usage WHERE user_id = ? AND ${safeCol} IS NOT NULL AND ${safeCol} != '' ORDER BY ${safeCol} LIMIT 500`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
 }

@@ -7,6 +7,9 @@ import type {
 
 
 const WORKER = import.meta.env['VITE_WORKER_URL'] ?? ''
+if (!WORKER && import.meta.env.PROD) {
+  throw new Error('VITE_WORKER_URL is not set — all API calls will fail')
+}
 
 async function getToken(): Promise<string> {
   const user = auth.currentUser

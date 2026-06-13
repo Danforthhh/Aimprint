@@ -260,8 +260,9 @@ async function parseFile(
       if (output > 0) {
         sess.requestCount++
         sess.model = d.message.model ?? sess.model
-        if (!sess.firstMessageAt || d.timestamp! < sess.firstMessageAt) sess.firstMessageAt = d.timestamp
-        if (!sess.lastMessageAt  || d.timestamp! > sess.lastMessageAt)  sess.lastMessageAt  = d.timestamp
+        const tsMs = new Date(d.timestamp!).getTime()
+        if (!sess.firstMessageAt || tsMs < new Date(sess.firstMessageAt).getTime()) sess.firstMessageAt = d.timestamp
+        if (!sess.lastMessageAt  || tsMs > new Date(sess.lastMessageAt).getTime())  sess.lastMessageAt  = d.timestamp
 
         const project = path.basename(d.cwd ?? sess.cwd ?? 'unknown')
         const ticket  = extractTicket(d.gitBranch ?? sess.gitBranch)
@@ -392,9 +393,9 @@ async function main() {
             if (!existing.gitBranch && v.gitBranch)       existing.gitBranch = v.gitBranch
             if (!existing.entrypoint && v.entrypoint)     existing.entrypoint = v.entrypoint
             // Keep earliest firstMessageAt, latest lastMessageAt
-            if (v.firstMessageAt && (!existing.firstMessageAt || v.firstMessageAt < existing.firstMessageAt))
+            if (v.firstMessageAt && (!existing.firstMessageAt || new Date(v.firstMessageAt).getTime() < new Date(existing.firstMessageAt).getTime()))
               existing.firstMessageAt = v.firstMessageAt
-            if (v.lastMessageAt && (!existing.lastMessageAt || v.lastMessageAt > existing.lastMessageAt))
+            if (v.lastMessageAt && (!existing.lastMessageAt || new Date(v.lastMessageAt).getTime() > new Date(existing.lastMessageAt).getTime()))
               existing.lastMessageAt = v.lastMessageAt
           }
         }
@@ -407,7 +408,7 @@ async function main() {
 
   for (const projectDir of fs.readdirSync(CLAUDE_PROJECTS_DIR)) {
     const fullDir = path.join(CLAUDE_PROJECTS_DIR, projectDir)
-    if (!fs.statSync(fullDir).isDirectory()) continue
+    try { if (!fs.statSync(fullDir).isDirectory()) continue } catch { continue }
     await scanDir(fullDir)
     // Each session may have a same-named subdirectory containing subagents/
     for (const entry of fs.readdirSync(fullDir)) {
@@ -457,6 +458,7 @@ async function main() {
         read: sess.toolCounts.read,
         todo: sess.toolCounts.todo,
         agent: sess.toolCounts.agent,
+        total: sess.toolCounts.total,
       }),
     })
   }

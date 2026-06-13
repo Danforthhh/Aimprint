@@ -18,10 +18,11 @@ interface Env {
 
 type Handler = (req: Request, env: Env, params?: Record<string, string>) => Promise<Response>
 
-// days=0 means "all time"; positive values are clamped to 1–3650
-function clampDays(raw: string): number {
+// days=0 means "all time"; positive values are clamped to 1–3650; invalid/negative → default
+function clampDays(raw: string, def = 30): number {
   const n = parseInt(raw)
-  if (isNaN(n) || n <= 0) return 0
+  if (isNaN(n) || n < 0) return def
+  if (n === 0) return 0
   return Math.min(n, 3650)
 }
 
@@ -91,7 +92,12 @@ export const handleIngest: Handler = async (req, env) => {
   if (userIdOrErr instanceof Response) return userIdOrErr
   const userId = userIdOrErr
 
-  const body = await req.json() as { records?: TokenRecord[]; sessions?: SessionMeta[] }
+  let body: { records?: TokenRecord[]; sessions?: SessionMeta[] }
+  try {
+    body = await req.json() as { records?: TokenRecord[]; sessions?: SessionMeta[] }
+  } catch {
+    return err('Invalid JSON body', 400)
+  }
   const rawRecords = (body.records ?? []).slice(0, 1000)
   const rawSessions = (body.sessions ?? []).slice(0, 1000)
 
@@ -270,10 +276,21 @@ export const handleUpdateCategory: Handler = async (req, env, params) => {
   const user = await requireFirebaseAuth(req, env)
   if (user instanceof Response) return user
 
+  // Admin mode is read-only — block writes when impersonating another user
+  const url = new URL(req.url)
+  if (resolveUserId(user, url, env.ADMIN_EMAIL) !== user.uid) {
+    return err('Read-only in admin view', 403)
+  }
+
   const sessionId = params?.id
   if (!sessionId || sessionId.length > 128) return err('Invalid session id')
 
-  const body = await req.json() as { category?: string }
+  let body: { category?: string }
+  try {
+    body = await req.json() as { category?: string }
+  } catch {
+    return err('Invalid JSON body', 400)
+  }
   if (!body.category) return err('Missing category')
   if (!VALID_CATEGORIES.has(body.category)) return err('Invalid category')
 
@@ -310,8 +327,8 @@ export const handleCreateSyncToken: Handler = async (req, env) => {
   const raw = typeof body.label === 'string' ? body.label.trim() : ''
   if (!raw) return err('Label is required', 400)
   const label = raw.slice(0, 64)
-  if (!/^[\x20-\x7E]+$/.test(label) || /<|>|&/.test(label)) {
-    return err('Label must contain only printable ASCII characters (no < > &)', 400)
+  if (!/^[\x20-\x7E]+$/.test(label) || /[<>&"']/.test(label)) {
+    return err('Label must contain only printable ASCII characters (no < > & " \')', 400)
   }
   const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
 
@@ -395,7 +412,7 @@ export const handleExportCsv: Handler = async (req, env) => {
 
   const CAP = 2000
   const sessions = await querySessions(env.DB, f, CAP, 0)
-  const truncated = sessions.length === CAP
+  const truncated = sessions.length >= CAP
 
   const headers = ['session_id', 'date', 'machine', 'project', 'model', 'category', 'ticket', 'tokens', 'cost_usd']
   const rows = (sessions as Record<string, unknown>[]).map(s =>
