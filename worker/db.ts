@@ -26,7 +26,8 @@ export interface D1ExecResult {
 
 export async function upsertUser(db: D1Database, userId: string, email: string): Promise<void> {
   await db.prepare(
-    'INSERT OR IGNORE INTO users (user_id, email, created_at) VALUES (?, ?, ?)'
+    `INSERT INTO users (user_id, email, created_at) VALUES (?, ?, ?)
+     ON CONFLICT (user_id) DO UPDATE SET email = excluded.email`
   ).bind(userId, email, new Date().toISOString()).run()
 }
 
@@ -39,14 +40,23 @@ async function hashToken(raw: string): Promise<string> {
 
 export async function lookupSyncToken(db: D1Database, rawToken: string): Promise<string | null> {
   const hash = await hashToken(rawToken)
-  // Try hashed row first (new tokens), fall back to plaintext for legacy rows
-  let row = await db.prepare('SELECT user_id FROM sync_tokens WHERE token = ?')
+  // Primary: hashed token (all new tokens, and legacy tokens after first use)
+  const row = await db.prepare('SELECT user_id FROM sync_tokens WHERE token = ?')
     .bind(hash).first<{ user_id: string }>()
-  if (!row) {
-    row = await db.prepare('SELECT user_id FROM sync_tokens WHERE token = ? AND token_id IS NULL')
-      .bind(rawToken).first<{ user_id: string }>()
-  }
-  return row?.user_id ?? null
+  if (row) return row.user_id
+
+  // Legacy fallback: plaintext token stored before hashing was introduced.
+  // On match, upgrade in-place so the plaintext is never stored again after this call.
+  const legacy = await db.prepare(
+    'SELECT user_id FROM sync_tokens WHERE token = ? AND token_id IS NULL'
+  ).bind(rawToken).first<{ user_id: string }>()
+  if (!legacy) return null
+
+  await db.prepare(
+    'UPDATE sync_tokens SET token = ?, token_prefix = ? WHERE token = ? AND token_id IS NULL'
+  ).bind(hash, rawToken.slice(0, 8), rawToken).run()
+
+  return legacy.user_id
 }
 
 export async function createSyncToken(db: D1Database, userId: string, rawToken: string, label: string): Promise<void> {
@@ -164,18 +174,29 @@ export async function upsertSessionMeta(
   sessions: SessionMeta[],
 ): Promise<void> {
   if (sessions.length === 0) return
-  const stmts = sessions.map(s =>
-    db.prepare(
-      `INSERT OR REPLACE INTO session_meta
-        (session_id, user_id, category, category_source, first_message, tool_summary, updated_at)
-       VALUES (?,?,?,?,?,?,?)`
-    ).bind(
-      s.session_id, userId, s.category, s.category_source,
-      s.first_message ?? null, s.tool_summary ?? null,
-      new Date().toISOString(),
+  const CHUNK = 500
+  const now = new Date().toISOString()
+  for (let i = 0; i < sessions.length; i += CHUNK) {
+    const chunk = sessions.slice(i, i + CHUNK)
+    const stmts = chunk.map(s =>
+      db.prepare(
+        `INSERT INTO session_meta
+          (session_id, user_id, category, category_source, first_message, tool_summary, updated_at)
+         VALUES (?,?,?,?,?,?,?)
+         ON CONFLICT (session_id, user_id) DO UPDATE SET
+           category        = CASE WHEN category_source = 'manual' THEN category        ELSE excluded.category        END,
+           category_source = CASE WHEN category_source = 'manual' THEN 'manual'        ELSE excluded.category_source END,
+           first_message   = excluded.first_message,
+           tool_summary    = excluded.tool_summary,
+           updated_at      = excluded.updated_at`
+      ).bind(
+        s.session_id, userId, s.category, s.category_source,
+        s.first_message ?? null, s.tool_summary ?? null,
+        now,
+      )
     )
-  )
-  await db.batch(stmts)
+    await db.batch(stmts)
+  }
 }
 
 export async function updateSessionCategory(
@@ -339,12 +360,12 @@ export async function querySessions(
     : 'ORDER BY MAX(tu.timestamp) DESC'
   const result = await db.prepare(
     `SELECT tu.session_id,
-            tu.machine,
-            tu.project,
-            tu.model,
-            tu.git_branch,
-            tu.ticket,
-            tu.date,
+            MIN(tu.machine)    AS machine,
+            MIN(tu.project)    AS project,
+            MAX(tu.model)      AS model,
+            MIN(tu.git_branch) AS git_branch,
+            MIN(tu.ticket)     AS ticket,
+            MIN(tu.date)       AS date,
             COALESCE(sm.category, 'other')        AS category,
             COALESCE(sm.category_source, 'auto')  AS category_source,
             SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
@@ -363,19 +384,7 @@ export async function queryDailyAgentCalls(
   db: D1Database,
   f: UsageFilters,
 ): Promise<{ date: string; agent_calls: number }[]> {
-  const conditions: string[] = ['tu.user_id = ?']
-  const bindings: unknown[] = [f.userId]
-
-  if (f.days && f.days > 0) {
-    const since = new Date(Date.now() - f.days * 86400_000).toISOString().slice(0, 10)
-    conditions.push('tu.date >= ?')
-    bindings.push(since)
-  }
-  if (f.project && f.project !== 'all') { conditions.push('tu.project = ?'); bindings.push(f.project) }
-  if (f.model   && f.model   !== 'all') { conditions.push('tu.model = ?');   bindings.push(f.model) }
-  if (f.machine && f.machine !== 'all') { conditions.push('tu.machine = ?'); bindings.push(f.machine) }
-
-  const where = conditions.join(' AND ')
+  const { clause, bindings } = buildWhere(f)
   const result = await db.prepare(
     `SELECT date, SUM(agent_count) AS agent_calls
      FROM (
@@ -383,7 +392,7 @@ export async function queryDailyAgentCalls(
               CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) AS agent_count
        FROM token_usage tu
        LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
-       WHERE ${where}
+       WHERE ${clause}
        GROUP BY tu.session_id
        HAVING CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) > 0
      )
@@ -398,27 +407,15 @@ export async function queryAgentCalls(
   db: D1Database,
   f: UsageFilters,
 ): Promise<{ agent_calls: number; sessions_with_agents: number }> {
-  const conditions: string[] = ['tu.user_id = ?']
-  const bindings: unknown[] = [f.userId]
-
-  if (f.days && f.days > 0) {
-    const since = new Date(Date.now() - f.days * 86400_000).toISOString().slice(0, 10)
-    conditions.push('tu.date >= ?')
-    bindings.push(since)
-  }
-  if (f.project && f.project !== 'all') { conditions.push('tu.project = ?'); bindings.push(f.project) }
-  if (f.model   && f.model   !== 'all') { conditions.push('tu.model = ?');   bindings.push(f.model) }
-  if (f.machine && f.machine !== 'all') { conditions.push('tu.machine = ?'); bindings.push(f.machine) }
-
-  const where = conditions.join(' AND ')
+  const { clause, bindings } = buildWhere(f)
   const row = await db.prepare(
-    `SELECT COALESCE(SUM(CAST(json_extract(tool_summary, '$.agent') AS INTEGER)), 0) AS agent_calls,
-            COUNT(CASE WHEN CAST(json_extract(tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
+    `SELECT COALESCE(SUM(CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER)), 0) AS agent_calls,
+            COUNT(CASE WHEN CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
      FROM (
        SELECT DISTINCT tu.session_id, sm.tool_summary
        FROM token_usage tu
        LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
-       WHERE ${where}
+       WHERE ${clause}
      )`
   ).bind(...bindings).first<{ agent_calls: number; sessions_with_agents: number }>()
 
@@ -430,14 +427,14 @@ const DISTINCT_COL_ALLOWLIST = new Set(['project', 'model', 'machine'])
 export async function queryDistinct(db: D1Database, userId: string, col: 'project' | 'model' | 'machine') {
   if (!DISTINCT_COL_ALLOWLIST.has(col)) return []
   const result = await db.prepare(
-    `SELECT DISTINCT ${col} AS val FROM token_usage WHERE user_id = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`
+    `SELECT DISTINCT ${col} AS val FROM token_usage WHERE user_id = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col} LIMIT 500`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
 }
 
 export async function queryTickets(db: D1Database, userId: string) {
   const result = await db.prepare(
-    `SELECT DISTINCT ticket AS val FROM token_usage WHERE user_id = ? AND ticket IS NOT NULL ORDER BY ticket`
+    `SELECT DISTINCT ticket AS val FROM token_usage WHERE user_id = ? AND ticket IS NOT NULL ORDER BY ticket LIMIT 500`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
 }

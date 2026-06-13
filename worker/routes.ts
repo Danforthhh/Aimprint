@@ -84,7 +84,7 @@ export const handleIngest: Handler = async (req, env) => {
   const records = rawRecords
     .filter(r =>
       typeof r.request_id === 'string' && r.request_id.length > 0 && r.request_id.length <= 128 &&
-      typeof r.session_id === 'string' && r.session_id.length > 0 &&
+      typeof r.session_id === 'string' && r.session_id.length > 0 && r.session_id.length <= 256 &&
       typeof r.input_tokens  === 'number' && r.input_tokens  >= 0 &&
       typeof r.output_tokens === 'number' && r.output_tokens >= 0 &&
       typeof r.cache_read    === 'number' && r.cache_read    >= 0 &&
