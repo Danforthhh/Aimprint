@@ -23,7 +23,6 @@ npm run worker:migrate:local   # local dev
 
 ## 3. Set Worker secrets
 ```bash
-wrangler secret put WORKER_TOKEN        # any long random string
 wrangler secret put FIREBASE_PROJECT_ID # your Firebase project ID
 ```
 
@@ -40,7 +39,9 @@ npm run worker:deploy
 4. Create `.env.local` from `.env.example` and fill in the values
 
 ## 6. Configure GitHub Pages
-In your GitHub repo → Settings → Pages → Source: **Deploy from a branch** → branch `gh-pages` → `/ (root)` → Save.
+In your GitHub repo → Settings → Pages → Source: **GitHub Actions** → Save.
+
+(The workflow uses `actions/deploy-pages` — do NOT set it to "Deploy from a branch".)
 
 ## 7. Deploy the frontend
 
