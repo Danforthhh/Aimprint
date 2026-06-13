@@ -71,7 +71,7 @@ export default function App() {
           .then(f => {
             if (f.machines.length === 0) setOnboarding(true)
           })
-          .catch(() => {})
+          .catch(err => console.warn('fetchFilters on auth:', err))
       }
     })
   }, [])
