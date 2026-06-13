@@ -32,6 +32,8 @@ function corsHeaders(origin: string): Record<string, string> {
     'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store, no-cache',
     'Content-Security-Policy': "default-src 'none'",
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   }
 }
 
