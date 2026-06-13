@@ -1,6 +1,6 @@
 {
   "name": "@danforthh/aimprint-sync",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sync Claude Code token logs to your Aimprint dashboard",
   "type": "commonjs",
   "bin": {

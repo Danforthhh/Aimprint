@@ -66,21 +66,23 @@ const REAL_PROJECTS_DIR = (() => {
 const MACHINE = os.hostname()
 const BATCH_SIZE = 100
 
-// ── Pricing (same as worker) ──────────────────────────────────────────────────
+// ── Line ending detection ─────────────────────────────────────────────────────
 
-function estimateCost(model: string, input: number, output: number, cacheRead: number, cacheCreation: number): number {
-  const p: Record<string, [number, number, number, number]> = {
-    'claude-fable-5':    [10.00, 50.00, 1.00, 12.50],
-    'claude-opus-4-8':   [ 5.00, 25.00, 0.50,  6.25],
-    'claude-opus-4-7':   [ 5.00, 25.00, 0.50,  6.25],
-    'claude-opus-4-6':   [ 5.00, 25.00, 0.50,  6.25],
-    'claude-opus-4-5':   [ 5.00, 25.00, 0.50,  6.25],
-    'claude-sonnet-4-6': [ 3.00, 15.00, 0.30,  3.75],
-    'claude-sonnet-4-5': [ 3.00, 15.00, 0.30,  3.75],
-    'claude-haiku-4-5':  [ 1.00,  5.00, 0.10,  1.25],
-  }
-  const [pi, po, pr, pc] = p[model] ?? [3.00, 15.00, 0.30, 3.75]
-  return (input * pi + output * po + cacheRead * pr + cacheCreation * pc) / 1_000_000
+// readline strips \r before delivering lines, so Buffer.byteLength(line + '\n')
+// under-counts by 1 byte per line on CRLF files (common on Windows).
+// Sample the file header to detect the actual separator size used.
+function detectLineSepSize(filePath: string): 1 | 2 {
+  const buf = Buffer.alloc(1024)
+  let fd: number | undefined
+  try {
+    fd = fs.openSync(filePath, 'r')
+    const n = fs.readSync(fd, buf, 0, 1024, 0)
+    for (let i = 0; i < n - 1; i++) {
+      if (buf[i] === 0x0d && buf[i + 1] === 0x0a) return 2
+    }
+    return 1
+  } catch { return 1 }
+  finally { if (fd !== undefined) try { fs.closeSync(fd) } catch { /* ignore */ } }
 }
 
 // ── Ticket extraction ─────────────────────────────────────────────────────────
@@ -164,6 +166,7 @@ async function parseFile(
   const stat = fs.statSync(filePath)
   if (stat.size <= offset) return { records: new Map(), sessions: new Map(), newOffset: offset }
 
+  const sepSize = detectLineSepSize(filePath)
   const fd = fs.openSync(filePath, 'r')
   const stream = fs.createReadStream(filePath, { start: offset, fd, autoClose: true })
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
@@ -175,7 +178,7 @@ async function parseFile(
   const lastUserMessage = new Map<string, string>()
 
   for await (const line of rl) {
-    newOffset += Buffer.byteLength(line + '\n')
+    newOffset += Buffer.byteLength(line) + sepSize
     if (!line.trim()) continue
 
     let d: JLine
@@ -289,7 +292,7 @@ async function parseFile(
             cache_read:    cacheR,
             cache_creation: cacheC,
             is_sidechain:  d.isSidechain ? 1 : 0,
-            cost_usd:      estimateCost(sess.model, input, output, cacheR, cacheC),
+            cost_usd:      0,  // worker recomputes server-side from its own pricing table
             request_category: reqCategory,
           })
         }
