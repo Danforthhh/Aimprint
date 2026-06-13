@@ -14,6 +14,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 
 const recaptchaSiteKey = import.meta.env['VITE_RECAPTCHA_SITE_KEY']
+if (import.meta.env.PROD && !recaptchaSiteKey) {
+  console.error('VITE_RECAPTCHA_SITE_KEY is not set — App Check will not be initialized in production')
+}
 if (recaptchaSiteKey) {
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(recaptchaSiteKey),

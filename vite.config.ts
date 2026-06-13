@@ -2,6 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const REQUIRED_PROD_VARS = ['VITE_WORKER_URL', 'VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_PROJECT_ID']
+if (process.env['NODE_ENV'] === 'production') {
+  const missing = REQUIRED_PROD_VARS.filter(k => !process.env[k])
+  if (missing.length) throw new Error(`Missing required env vars: ${missing.join(', ')}`)
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/Aimprint/',
