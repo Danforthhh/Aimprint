@@ -329,8 +329,9 @@ const DIM_COLUMNS: Record<string, string> = {
 }
 
 export async function queryByDimension(db: D1Database, f: UsageFilters, dim: 'project' | 'model' | 'machine' | 'ticket') {
+  if (!Object.prototype.hasOwnProperty.call(DIM_COLUMNS, dim)) return []
   const col = DIM_COLUMNS[dim]
-  if (!col || !Object.values(DIM_COLUMNS).includes(col)) return []
+  if (!col) return []
   const { clause, bindings } = buildWhere(f)
   const result = await db.prepare(
     `SELECT ${col} AS label,
