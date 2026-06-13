@@ -204,7 +204,7 @@ export default function App() {
           onRefresh={loadData}
           loading={loading}
           isAdmin={user?.email === ADMIN_EMAIL}
-          adminUsers={adminUsers}
+          adminUsers={adminUsers.filter(u => u.email !== user?.email)}
           viewAsUserId={viewAsUser?.user_id}
           onViewAsChange={setViewAsUser}
         />

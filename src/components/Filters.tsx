@@ -57,7 +57,7 @@ export default function Filters({ filters, filtersData, onChange, onExport, onRe
       {/* Admin: viewing-as selector */}
       {isAdmin && adminUsers.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-blue-400 uppercase tracking-wider font-semibold">Viewing as</span>
+          <span className="text-xs text-gray-500 uppercase tracking-wider">Viewing as</span>
           <select
             value={viewAsUserId ?? 'self'}
             onChange={e => {
@@ -68,7 +68,7 @@ export default function Filters({ filters, filtersData, onChange, onExport, onRe
                 if (u) onViewAsChange?.(u)
               }
             }}
-            className="bg-blue-900/40 border border-blue-700 rounded-lg px-2 py-1.5 text-sm text-blue-200 focus:outline-none focus:border-blue-400"
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
           >
             <option value="self">Myself</option>
             {adminUsers.map(u => (
