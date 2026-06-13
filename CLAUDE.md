@@ -59,6 +59,11 @@ npm run worker:deploy  # → tsc check + code review + doc-updater, then deploys
 
 > `npm run deploy` (gh-pages direct) is kept for one-off deploys without a push, but **push to main is the canonical path** — GitHub Actions handles the build with proper secrets.
 
+## Security & correctness hardening — 2026-06-13
+**Context:** Audit of `worker/routes.ts`, `worker/db.ts`, and `sync/index.ts` surfaced a batch of low-severity but real issues: a TOCTOU race on token deletion, raw column interpolation in a D1 query, an unbounded `clampDays(0)` edge case, a `viewAs` impersonation bypass on admin writes, and timestamp comparisons that could silently misbehave across UTC/offset formats.
+**Options considered:** Fix individually inline vs. consolidate in one guarded commit to keep the surface area auditable.
+**Chosen:** Single hardening commit — `deleteSyncToken` now uses one atomic DELETE (eliminates TOCTOU); `queryDistinct` uses a static `SAFE_DISTINCT_COLS` allowlist instead of interpolating caller-supplied column names; `clampDays` returns the default for NaN/negative; `handleUpdateCategory` returns 403 when `viewAs` is set; all `req.json()` calls are wrapped to return 400 on parse failure; timestamp comparisons use `.getTime()` throughout sync.
+
 ## request_id scoping — 2026-06-13
 **Context:** A user with two accounts found that re-syncing under their original account silently skipped records already claimed by account #2, because `request_id` was a global `PRIMARY KEY` — not scoped per user.
 **Options considered:**

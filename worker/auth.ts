@@ -59,13 +59,16 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
     const now = Math.floor(Date.now() / 1000)
     if (payload.exp < now)                               return null  // expired
     if (typeof payload.nbf === 'number' && payload.nbf > now) return null  // not yet valid
-    if (typeof payload.iat !== 'number' || payload.iat > now) return null  // issued in the future
+    // Allow 60-second clock skew — tokens issued within 1 min of "now" are valid
+    if (typeof payload.iat !== 'number' || payload.iat > now + 60) return null  // issued in the future
     if (typeof payload.auth_time !== 'number' || payload.auth_time > now) return null  // auth in future
     if (payload.aud !== projectId)                       return null  // wrong audience
     if (payload.iss !== `https://securetoken.google.com/${projectId}`) return null  // wrong issuer
     if (!payload.sub || typeof payload.sub !== 'string') return null  // missing subject (uid)
+    // Require email — phone/anonymous auth UIDs are not supported (no ADMIN_EMAIL matching)
+    if (!payload.email || typeof payload.email !== 'string') return null
 
-    return { uid: payload.sub, email: payload.email ?? '' }
+    return { uid: payload.sub, email: payload.email }
   } catch {
     return null
   }

@@ -35,10 +35,9 @@ export default function SummaryCards({ totals, totalsPrev }: Props) {
   const cacheRead  = totals.cache_read ?? 0
   const grandTotal = active + cacheRead
 
-  const activePrev    = (totalsPrev?.input ?? 0) + (totalsPrev?.output ?? 0) + (totalsPrev?.cache_creation ?? 0)
-  const prevActive    = Math.max(0, activePrev - active)
-  const prevSessions  = Math.max(0, (totalsPrev?.sessions ?? 0) - (totals.sessions ?? 0))
-  const prevCost      = Math.max(0, (totalsPrev?.cost_usd ?? 0) - (totals.cost_usd ?? 0))
+  const prevActive    = (totalsPrev?.input ?? 0) + (totalsPrev?.output ?? 0) + (totalsPrev?.cache_creation ?? 0)
+  const prevSessions  = totalsPrev?.sessions ?? 0
+  const prevCost      = totalsPrev?.cost_usd ?? 0
 
   const cacheEfficiency = grandTotal > 0 ? Math.round((cacheRead / grandTotal) * 100) : 0
   // Sonnet: $3.00/M input - $0.30/M cache_read = $2.70/M saved per cache_read token (ref: worker/pricing.ts)

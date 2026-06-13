@@ -29,6 +29,7 @@ export function estimateCost(
   cacheCreation: number,
 ): number {
   const p = PRICING[model] ?? DEFAULT_PRICING
+  if (!(model in PRICING) && model) console.warn(`[pricing] Unknown model "${model}" — using default Sonnet rates`)
   const M = 1_000_000
   return (input * p.input + output * p.output + cacheRead * p.cacheRead + cacheCreation * p.cacheCreation) / M
 }

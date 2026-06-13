@@ -18,5 +18,9 @@ export function loadCursors(): CursorMap {
 
 export function saveCursors(cursors: CursorMap): void {
   fs.mkdirSync(CURSOR_DIR, { recursive: true })
-  fs.writeFileSync(CURSOR_FILE, JSON.stringify(cursors, null, 2))
+  // Write to a temp file then rename — rename is atomic on POSIX/NTFS, so a
+  // kill mid-write can never leave cursor.json partially written/truncated.
+  const tmp = CURSOR_FILE + '.tmp'
+  fs.writeFileSync(tmp, JSON.stringify(cursors, null, 2))
+  fs.renameSync(tmp, CURSOR_FILE)
 }

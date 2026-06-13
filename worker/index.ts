@@ -22,9 +22,7 @@ const ALLOWED_ORIGINS = [
 ]
 
 function corsHeaders(origin: string): Record<string, string> {
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+  const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Sync-Token',
     'Vary': 'Origin',
@@ -36,10 +34,17 @@ function corsHeaders(origin: string): Record<string, string> {
     'Strict-Transport-Security': 'max-age=31536000',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   }
+  // Only reflect the origin for known-allowed origins — unlisted origins get no ACAO header,
+  // which causes browsers to block cross-origin reads (correct behaviour).
+  if (ALLOWED_ORIGINS.includes(origin)) headers['Access-Control-Allow-Origin'] = origin
+  return headers
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (!env.FIREBASE_PROJECT_ID) {
+      return new Response('Worker misconfigured: missing FIREBASE_PROJECT_ID', { status: 500 })
+    }
     const origin = request.headers.get('Origin') ?? ''
 
     // CORS preflight
