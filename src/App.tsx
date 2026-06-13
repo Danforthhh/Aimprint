@@ -66,9 +66,11 @@ export default function App() {
       setUser(u)
       setAuthLoading(false)
       if (u) {
-        // Check if first time (no machines yet → show onboarding)
+        // Check if first time (no machines yet → show onboarding).
+        // Also pre-populate filtersData so loadData's call is a refresh, not the first load.
         fetchFilters()
           .then(f => {
+            setFiltersData(f)
             if (f.machines.length === 0) setOnboarding(true)
           })
           .catch(err => console.warn('fetchFilters on auth:', err))

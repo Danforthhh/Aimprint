@@ -7,7 +7,7 @@ import {
   queryDailyAgentCalls, queryAgentCalls, queryByDimension, querySessions, queryDistinct, queryTickets,
   queryCategoryTrend,
   deleteUserAccount,
-  type D1Database, type TokenRecord, type SessionMeta,
+  type D1Database, type TokenRecord, type SessionMeta, type UsageFilters,
 } from './db'
 
 interface Env {
@@ -80,11 +80,16 @@ export const handleIngest: Handler = async (req, env) => {
   const rawRecords = (body.records ?? []).slice(0, 1000)
   const rawSessions = (body.sessions ?? []).slice(0, 1000)
 
-  // Sanitize records — drop anything with invalid counts or IDs
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+  const ISO_TS_RE   = /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/
+
+  // Sanitize records — drop anything with invalid counts, IDs, or date formats
   const records = rawRecords
     .filter(r =>
       typeof r.request_id === 'string' && r.request_id.length > 0 && r.request_id.length <= 128 &&
       typeof r.session_id === 'string' && r.session_id.length > 0 && r.session_id.length <= 256 &&
+      typeof r.date       === 'string' && ISO_DATE_RE.test(r.date) &&
+      typeof r.timestamp  === 'string' && ISO_TS_RE.test(r.timestamp) &&
       typeof r.input_tokens  === 'number' && r.input_tokens  >= 0 &&
       typeof r.output_tokens === 'number' && r.output_tokens >= 0 &&
       typeof r.cache_read    === 'number' && r.cache_read    >= 0 &&
@@ -93,8 +98,8 @@ export const handleIngest: Handler = async (req, env) => {
     .map(r => ({
       request_id:       r.request_id,
       session_id:       r.session_id,
-      timestamp:        typeof r.timestamp  === 'string' ? r.timestamp  : '',
-      date:             typeof r.date       === 'string' ? r.date       : '',
+      timestamp:        r.timestamp,
+      date:             r.date,
       machine:          typeof r.machine    === 'string' ? r.machine.slice(0, 128)   : '',
       project:          typeof r.project    === 'string' ? r.project.slice(0, 256)   : '',
       cwd:              typeof r.cwd        === 'string' ? r.cwd.slice(0, 512)        : undefined,
@@ -154,8 +159,13 @@ export const handleUsage: Handler = async (req, env) => {
     queryDailyAgentCalls(env.DB, f),
   ])
 
-  // Previous period for comparison: fetch totals for double window
-  const prevF = { ...f, days: days === 0 ? 0 : days * 2 }
+  // Previous period: the equivalent window immediately before the current one.
+  // e.g. days=7 → prev covers [now-14d, now-7d), not [now-14d, now).
+  const prevF: UsageFilters = days === 0 ? { ...f, days: 0 } : {
+    ...f,
+    days: days * 2,
+    until: new Date(Date.now() - days * 86400_000).toISOString().slice(0, 10),
+  }
   const totalsPrev = await queryTotals(env.DB, prevF)
 
   return json({ daily, totals, totalsPrev, agent_calls: agentCalls.agent_calls, sessions_with_agents: agentCalls.sessions_with_agents, daily_agent_calls: dailyAgentCalls })

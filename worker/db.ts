@@ -216,6 +216,7 @@ export async function updateSessionCategory(
 export interface UsageFilters {
   userId: string
   days?: number
+  until?: string  // exclusive upper bound 'YYYY-MM-DD' — used for previous-period queries
   project?: string
   model?: string
   machine?: string
@@ -231,6 +232,10 @@ function buildWhere(f: UsageFilters): { clause: string; bindings: unknown[] } {
     const since = new Date(Date.now() - f.days * 86400_000).toISOString().slice(0, 10)
     conditions.push('tu.date >= ?')
     bindings.push(since)
+  }
+  if (f.until) {
+    conditions.push('tu.date < ?')
+    bindings.push(f.until)
   }
   if (f.project && f.project !== 'all') { conditions.push('tu.project = ?'); bindings.push(f.project) }
   if (f.model   && f.model   !== 'all') { conditions.push('tu.model = ?');   bindings.push(f.model) }
