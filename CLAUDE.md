@@ -59,6 +59,13 @@ npm run worker:deploy  # → tsc check + code review + doc-updater, then deploys
 
 > `npm run deploy` (gh-pages direct) is kept for one-off deploys without a push, but **push to main is the canonical path** — GitHub Actions handles the build with proper secrets.
 
+## request_id scoping — 2026-06-13
+**Context:** A user with two accounts found that re-syncing under their original account silently skipped records already claimed by account #2, because `request_id` was a global `PRIMARY KEY` — not scoped per user.
+**Options considered:**
+- Leave as-is (global PK) — simple but causes cross-account conflicts for the same user
+- Composite PK `(request_id, user_id)` — correct deduplication per user, no code changes needed beyond migration
+**Chosen:** Composite PK — migration `005_composite_pk_request_id.sql` recreates `token_usage` with `PRIMARY KEY (request_id, user_id)`. `INSERT OR IGNORE` in `db.ts` automatically deduplicates per user with no query changes needed.
+
 ## Landing page — 2026-06-06
 **Context:** No public marketing page existed — GitHub Pages URL went straight to the login screen.
 **Options considered:**

@@ -136,7 +136,7 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
 
             {resetSent && (
               <p className="text-green-400 text-sm bg-green-900/20 border border-green-800 rounded-lg px-3 py-2">
-                Password reset email sent — check your inbox.
+                Password reset email sent — check your inbox and your junk/spam folder if you don't see it within a minute.
               </p>
             )}
 
