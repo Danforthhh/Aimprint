@@ -357,20 +357,18 @@ async function main() {
   const allRecords = new Map<string, TokenRecord>()
   const allSessions = new Map<string, SessionAccum>()
 
-  // Scan all project dirs
-  for (const projectDir of fs.readdirSync(CLAUDE_PROJECTS_DIR)) {
-    const fullDir = path.join(CLAUDE_PROJECTS_DIR, projectDir)
-    if (!fs.statSync(fullDir).isDirectory()) continue
-
-    for (const file of fs.readdirSync(fullDir)) {
+  // Scan all project dirs (top-level JSONL + subagents/ subdirectory)
+  const scanDir = async (dir: string) => {
+    let entries: string[]
+    try { entries = fs.readdirSync(dir) } catch { return }
+    for (const file of entries) {
       if (!file.endsWith('.jsonl')) continue
-      const filePath = path.join(fullDir, file)
+      const filePath = path.join(dir, file)
       try {
         const realFilePath = fs.realpathSync(filePath)
         if (!realFilePath.startsWith(REAL_PROJECTS_DIR + path.sep)) continue
       } catch { continue }
       const offset = cursors[filePath] ?? 0
-
       try {
         const { records, sessions, newOffset } = await parseFile(filePath, offset)
         for (const [k, v] of records) allRecords.set(k, v)
@@ -404,6 +402,20 @@ async function main() {
       } catch (e) {
         console.warn(`  Warning: could not parse ${filePath}: ${e}`)
       }
+    }
+  }
+
+  for (const projectDir of fs.readdirSync(CLAUDE_PROJECTS_DIR)) {
+    const fullDir = path.join(CLAUDE_PROJECTS_DIR, projectDir)
+    if (!fs.statSync(fullDir).isDirectory()) continue
+    await scanDir(fullDir)
+    // Each session may have a same-named subdirectory containing subagents/
+    for (const entry of fs.readdirSync(fullDir)) {
+      const sessionSubDir = path.join(fullDir, entry)
+      try {
+        if (!fs.statSync(sessionSubDir).isDirectory()) continue
+      } catch { continue }
+      await scanDir(path.join(sessionSubDir, 'subagents'))
     }
   }
 

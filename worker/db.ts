@@ -316,7 +316,7 @@ export async function querySubagent(db: D1Database, f: UsageFilters) {
   const result = await db.prepare(
     `SELECT tu.is_sidechain,
             COUNT(DISTINCT tu.session_id)  AS sessions,
-            SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
+            SUM(tu.input_tokens + tu.output_tokens + tu.cache_creation) AS tokens,
             SUM(tu.cost_usd) AS cost_usd
      FROM token_usage tu
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
