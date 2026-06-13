@@ -186,8 +186,15 @@ export async function upsertSessionMeta(
          ON CONFLICT (session_id, user_id) DO UPDATE SET
            category        = CASE WHEN category_source = 'manual' THEN category        ELSE excluded.category        END,
            category_source = CASE WHEN category_source = 'manual' THEN 'manual'        ELSE excluded.category_source END,
-           first_message   = excluded.first_message,
-           tool_summary    = excluded.tool_summary,
+           first_message   = COALESCE(session_meta.first_message, excluded.first_message),
+           tool_summary    = json_object(
+             'edit',  COALESCE(json_extract(session_meta.tool_summary, '$.edit'),  0) + COALESCE(json_extract(excluded.tool_summary, '$.edit'),  0),
+             'bash',  COALESCE(json_extract(session_meta.tool_summary, '$.bash'),  0) + COALESCE(json_extract(excluded.tool_summary, '$.bash'),  0),
+             'read',  COALESCE(json_extract(session_meta.tool_summary, '$.read'),  0) + COALESCE(json_extract(excluded.tool_summary, '$.read'),  0),
+             'todo',  COALESCE(json_extract(session_meta.tool_summary, '$.todo'),  0) + COALESCE(json_extract(excluded.tool_summary, '$.todo'),  0),
+             'agent', COALESCE(json_extract(session_meta.tool_summary, '$.agent'), 0) + COALESCE(json_extract(excluded.tool_summary, '$.agent'), 0),
+             'total', COALESCE(json_extract(session_meta.tool_summary, '$.total'), 0) + COALESCE(json_extract(excluded.tool_summary, '$.total'), 0)
+           ),
            updated_at      = excluded.updated_at`
       ).bind(
         s.session_id, userId, s.category, s.category_source,
