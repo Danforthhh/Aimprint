@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.1 — 2026-06
+
+### Assessment follow-up fixes
+
+- **Previous-period comparison corrected**: `totalsPrev` now covers the actual prior window `[now-2N, now-N)` instead of the combined current+prior window `[now-2N, now)` — the "vs. last period" delta cards were systematically understating changes
+- **Ingest date/timestamp validation**: records with a `date` field that isn't `YYYY-MM-DD` or a `timestamp` that isn't ISO 8601 are now rejected, preventing arbitrary strings from polluting `GROUP BY date` queries
+- **ISO timestamp regex corrected**: `+-` in the character class was treated as an ASCII range (covering `,`), not two literal characters — fixed to `[\d:.Z+\-]`
+- **Auth-listener `fetchFilters` result used**: the `fetchFilters()` call on login now pre-populates `filtersData` instead of discarding the result; `loadData`'s subsequent call becomes a refresh rather than the initial load
+
 ## v1.4.0 — 2026-06
 
 ### Security audit #2 + bug fixes
@@ -9,7 +18,7 @@
 - **`queryAgentCalls` SQL scope bug**: outer SELECT referenced `sm.tool_summary` but `sm` is only defined in the inner subquery. Fixed to reference the column as `tool_summary` (the name the subquery exposes).
 
 **Security hardening (audit #2):**
-- **HSTS**: added `Strict-Transport-Security: max-age=31536000; includeSubDomains` to all Worker responses
+- **HSTS**: added `Strict-Transport-Security: max-age=31536000` to all Worker responses (`includeSubDomains` omitted — shared `*.workers.dev` namespace)
 - **Permissions-Policy**: added `camera=(), microphone=(), geolocation=()` to all Worker responses
 - **CSP connect-src narrowed**: replaced wildcard `*.googleapis.com` and `*.workers.dev` with exact endpoints (`identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `firebaseappcheck.googleapis.com`, `firebaseinstallations.googleapis.com`, `aimprint.vin-bories.workers.dev`); removed unused `*.cloudfunctions.net` and `wss://*.firebaseio.com`
 - **Sync token label sanitization**: labels validated against printable ASCII allowlist; `<`, `>`, `&` rejected server-side to prevent stored XSS

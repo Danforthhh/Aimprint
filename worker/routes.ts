@@ -81,7 +81,7 @@ export const handleIngest: Handler = async (req, env) => {
   const rawSessions = (body.sessions ?? []).slice(0, 1000)
 
   const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-  const ISO_TS_RE   = /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/
+  const ISO_TS_RE   = /^\d{4}-\d{2}-\d{2}T[\d:.Z+\-]+$/
 
   // Sanitize records — drop anything with invalid counts, IDs, or date formats
   const records = rawRecords
