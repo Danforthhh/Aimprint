@@ -36,6 +36,7 @@ export default function AgentCallsCard({ agentCalls, sessionsWithAgents, dailyDa
               width={24}
             />
             <Tooltip
+              cursor={false}
               formatter={(v: number) => [v, 'Agent calls']}
               contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
               labelStyle={{ color: '#e5e7eb' }}
