@@ -28,8 +28,10 @@ function corsHeaders(origin: string): Record<string, string> {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Sync-Token',
     'Vary': 'Origin',
     'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store, no-cache',
+    'Content-Security-Policy': "default-src 'none'",
   }
 }
 

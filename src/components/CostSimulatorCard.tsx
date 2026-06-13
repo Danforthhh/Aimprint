@@ -1,17 +1,11 @@
 import { useState } from 'react'
 import type { CategoryItem } from '../types'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '../types'
+import { fmtCost } from '../utils/format'
 
 interface Props {
   totalCostUsd: number
   categories: CategoryItem[]
-}
-
-function fmtCost(usd: number): string {
-  if (usd === 0) return '—'
-  if (usd < 0.01) return '<$0.01'
-  if (usd >= 1000) return `$${(usd / 1000).toFixed(1)}k`
-  return `$${usd.toFixed(2)}`
 }
 
 export default function CostSimulatorCard({ totalCostUsd, categories }: Props) {

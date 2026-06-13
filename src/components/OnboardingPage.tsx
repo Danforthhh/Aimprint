@@ -11,13 +11,17 @@ export default function OnboardingPage({ onDone }: Props) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied]   = useState(false)
   const [step, setStep]       = useState<1 | 2 | 3 | 4>(1)
+  const [error, setError]     = useState('')
 
   async function generate() {
     setLoading(true)
+    setError('')
     try {
       const result = await createSyncToken(label)
       setToken(result.token)
       setStep(2)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to generate token')
     } finally {
       setLoading(false)
     }
@@ -87,6 +91,9 @@ export default function OnboardingPage({ onDone }: Props) {
                 {loading ? 'Generating…' : 'Generate'}
               </button>
             </div>
+            {error && (
+              <p className="mt-2 text-xs text-red-400">{error}</p>
+            )}
             {token && (
               <div className="mt-3 flex items-center gap-2">
                 <code className="flex-1 bg-gray-800 rounded-lg px-3 py-2 text-xs text-green-400 break-all font-mono">

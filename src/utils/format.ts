@@ -11,6 +11,7 @@ export function fmtTokens(n: number, precise = false): string {
 
 export function fmtCost(usd: number): string {
   if (!usd || usd === 0) return '—'
-  if (usd < 0.001) return '<$0.001'
-  return `$${usd.toFixed(3)}`
+  if (usd < 0.01) return '<$0.01'
+  if (usd >= 1000) return `$${(usd / 1000).toFixed(1)}k`
+  return `$${usd.toFixed(2)}`
 }

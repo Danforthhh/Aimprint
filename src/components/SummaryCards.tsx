@@ -1,16 +1,10 @@
 import type { Totals } from '../types'
 import ComparisonBadge from './ComparisonBadge'
-import { fmtTokens } from '../utils/format'
+import { fmtTokens, fmtCost } from '../utils/format'
 
 interface Props {
   totals: Totals
   totalsPrev: Totals
-}
-
-function fmtCost(usd: number): string {
-  if (usd === 0) return '—'
-  if (usd < 0.01) return '<$0.01'
-  return `$${usd.toFixed(2)}`
 }
 
 interface CardProps {

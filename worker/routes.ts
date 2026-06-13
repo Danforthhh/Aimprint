@@ -353,7 +353,7 @@ export const handleExportCsv: Handler = async (req, env) => {
   const days = clampDays(url.searchParams.get('days') ?? '30')
   const f = { userId: user.uid, days }
 
-  const sessions = await querySessions(env.DB, f, 10000, 0)
+  const sessions = await querySessions(env.DB, f, 5000, 0)
 
   const headers = ['session_id', 'date', 'machine', 'project', 'model', 'category', 'ticket', 'tokens', 'cost_usd']
   const rows = (sessions as Record<string, unknown>[]).map(s =>
