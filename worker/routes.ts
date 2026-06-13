@@ -353,10 +353,13 @@ export const handleExportCsv: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = Math.max(1, clampDays(url.searchParams.get('days') ?? '30'))
-  const f = { userId: user.uid, days }
+  const rawDays = clampDays(url.searchParams.get('days') ?? '30')
+  if (rawDays === 0) return err('days parameter is required and must be > 0 for CSV export', 400)
+  const f = { userId: user.uid, days: rawDays }
 
-  const sessions = await querySessions(env.DB, f, 2000, 0)
+  const CAP = 2000
+  const sessions = await querySessions(env.DB, f, CAP, 0)
+  const truncated = sessions.length === CAP
 
   const headers = ['session_id', 'date', 'machine', 'project', 'model', 'category', 'ticket', 'tokens', 'cost_usd']
   const rows = (sessions as Record<string, unknown>[]).map(s =>
@@ -369,6 +372,7 @@ export const handleExportCsv: Handler = async (req, env) => {
       'Content-Type': 'text/csv',
       'Content-Disposition': 'attachment; filename="aimprint-export.csv"',
       'Cache-Control': 'no-store',
+      ...(truncated ? { 'X-Truncated': 'true', 'X-Row-Cap': String(CAP) } : {}),
     },
   })
 }

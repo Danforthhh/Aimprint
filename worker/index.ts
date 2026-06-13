@@ -32,7 +32,7 @@ function corsHeaders(origin: string): Record<string, string> {
     'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store, no-cache',
     'Content-Security-Policy': "default-src 'none'",
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Strict-Transport-Security': 'max-age=31536000',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   }
 }
@@ -107,8 +107,8 @@ export default {
       for (const [k, v] of Object.entries(cors)) newHeaders.set(k, v)
       return new Response(response.body, { status: response.status, headers: newHeaders })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Internal server error'
-      return new Response(JSON.stringify({ error: msg }), {
+      console.error('Unhandled Worker error:', e)
+      return new Response(JSON.stringify({ error: 'Internal server error' }), {
         status: 500,
         headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
       })

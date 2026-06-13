@@ -331,7 +331,6 @@ const DIM_COLUMNS: Record<string, string> = {
 export async function queryByDimension(db: D1Database, f: UsageFilters, dim: 'project' | 'model' | 'machine' | 'ticket') {
   if (!Object.prototype.hasOwnProperty.call(DIM_COLUMNS, dim)) return []
   const col = DIM_COLUMNS[dim]
-  if (!col) return []
   const { clause, bindings } = buildWhere(f)
   const result = await db.prepare(
     `SELECT ${col} AS label,
@@ -413,10 +412,11 @@ export async function queryAgentCalls(
     `SELECT COALESCE(SUM(CAST(json_extract(tool_summary, '$.agent') AS INTEGER)), 0) AS agent_calls,
             COUNT(CASE WHEN CAST(json_extract(tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
      FROM (
-       SELECT DISTINCT tu.session_id, sm.tool_summary
+       SELECT tu.session_id, MAX(sm.tool_summary) AS tool_summary
        FROM token_usage tu
        LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
        WHERE ${clause}
+       GROUP BY tu.session_id
      )`
   ).bind(...bindings).first<{ agent_calls: number; sessions_with_agents: number }>()
 
