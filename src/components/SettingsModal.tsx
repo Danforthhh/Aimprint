@@ -160,7 +160,7 @@ export default function SettingsModal({ onClose }: Props) {
                   <div key={t.token} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
                     <div>
                       <p className="text-sm text-white">{t.label}</p>
-                      <p className="text-xs text-gray-500 font-mono">{t.token}…</p>
+                      <p className="text-xs text-gray-500 font-mono">{t.token}</p>
                     </div>
                     <button
                       onClick={() => remove(t.token_id ?? t.token.slice(0, 8))}

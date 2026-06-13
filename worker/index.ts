@@ -45,6 +45,9 @@ export default {
     if (!env.FIREBASE_PROJECT_ID) {
       return new Response('Worker misconfigured: missing FIREBASE_PROJECT_ID', { status: 500 })
     }
+    if (!env.ADMIN_EMAIL) {
+      return new Response('Worker misconfigured: missing ADMIN_EMAIL', { status: 500 })
+    }
     const origin = request.headers.get('Origin') ?? ''
 
     // CORS preflight

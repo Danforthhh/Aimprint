@@ -133,14 +133,13 @@ export async function downloadCsv(f: FilterState, viewAs?: string): Promise<void
   if (!res.ok) throw new Error('CSV export failed')
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
-  try {
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'aimprint-export.csv'
-    a.click()
-  } finally {
-    URL.revokeObjectURL(url)
-  }
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'aimprint-export.csv'
+  a.click()
+  // Revoke after a short delay — revoking synchronously can abort the download
+  // before the browser has opened the stream (reproducible on Safari).
+  setTimeout(() => URL.revokeObjectURL(url), 100)
 }
 
 export async function deleteAccount(): Promise<void> {

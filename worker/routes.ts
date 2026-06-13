@@ -108,7 +108,7 @@ export const handleIngest: Handler = async (req, env) => {
   const records = rawRecords
     .filter(r =>
       typeof r.request_id === 'string' && r.request_id.length > 0 && r.request_id.length <= 128 &&
-      typeof r.session_id === 'string' && r.session_id.length > 0 && r.session_id.length <= 256 &&
+      typeof r.session_id === 'string' && r.session_id.length > 0 && r.session_id.length <= 256 && /^[\w-]+$/.test(r.session_id) &&
       typeof r.date       === 'string' && ISO_DATE_RE.test(r.date) &&
       typeof r.timestamp  === 'string' && ISO_TS_RE.test(r.timestamp) &&
       typeof r.input_tokens  === 'number' && r.input_tokens  >= 0 &&
@@ -261,7 +261,7 @@ export const handleSessions: Handler = async (req, env) => {
   const category = url.searchParams.get('category') ?? 'all'
   const ticket   = url.searchParams.get('ticket') ?? 'all'
   const limit    = clampLimit(url.searchParams.get('limit') ?? '50')
-  const offset   = Math.max(0, parseInt(url.searchParams.get('offset') ?? '0') || 0)
+  const offset   = Math.min(Math.max(0, parseInt(url.searchParams.get('offset') ?? '0') || 0), 100_000)
   const sortRaw  = url.searchParams.get('sort') ?? 'recent'
   const sort     = sortRaw === 'cost_desc' ? 'cost_desc' : 'recent'
 
