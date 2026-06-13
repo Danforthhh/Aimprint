@@ -284,6 +284,9 @@ export const handleCreateSyncToken: Handler = async (req, env) => {
   const raw = typeof body.label === 'string' ? body.label.trim() : ''
   if (!raw) return err('Label is required', 400)
   const label = raw.slice(0, 64)
+  if (!/^[\x20-\x7E]+$/.test(label) || /<|>|&/.test(label)) {
+    return err('Label must contain only printable ASCII characters (no < > &)', 400)
+  }
   const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
 
   await createSyncToken(env.DB, user.uid, token, label)
@@ -350,10 +353,10 @@ export const handleExportCsv: Handler = async (req, env) => {
   if (user instanceof Response) return user
 
   const url = new URL(req.url)
-  const days = clampDays(url.searchParams.get('days') ?? '30')
+  const days = Math.max(1, clampDays(url.searchParams.get('days') ?? '30'))
   const f = { userId: user.uid, days }
 
-  const sessions = await querySessions(env.DB, f, 5000, 0)
+  const sessions = await querySessions(env.DB, f, 2000, 0)
 
   const headers = ['session_id', 'date', 'machine', 'project', 'model', 'category', 'ticket', 'tokens', 'cost_usd']
   const rows = (sessions as Record<string, unknown>[]).map(s =>
