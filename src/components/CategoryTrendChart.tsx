@@ -61,6 +61,7 @@ export default function CategoryTrendChart({ data }: Props) {
             width={40}
           />
           <Tooltip
+            cursor={false}
             formatter={(value: unknown, name: string) => [
               fmtTokens(Number(value), true),
               CATEGORY_LABELS[name as keyof typeof CATEGORY_LABELS] ?? name,

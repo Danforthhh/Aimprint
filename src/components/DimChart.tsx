@@ -52,6 +52,7 @@ export default function DimChart({ title, data, color, subtitle, emptyState }: P
             width={110}
           />
           <Tooltip
+            cursor={false}
             formatter={(v: number, _name: string, props: { payload?: DimItem }) => [
               `${fmtTokens(v)} tokens · ${props.payload?.sessions ?? 0} sessions`,
               'Usage',
