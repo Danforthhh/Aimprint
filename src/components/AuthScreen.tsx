@@ -14,7 +14,7 @@ function friendlyAuthError(msg: string): string {
   if (msg.includes('email-already-in-use'))
     return 'An account with this email already exists.'
   if (msg.includes('weak-password'))
-    return 'Password must be at least 6 characters.'
+    return 'Password must be at least 8 characters.'
   if (msg.includes('too-many-requests'))
     return 'Too many failed attempts. Please try again later.'
   if (msg.includes('network-request-failed'))
@@ -122,7 +122,7 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
                 value={password}
                 onChange={e => setPass(e.target.value)}
                 required
-                minLength={6}
+                minLength={mode === 'register' ? 8 : undefined}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
                 placeholder="••••••••"
               />
