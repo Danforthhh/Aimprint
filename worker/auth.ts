@@ -31,7 +31,7 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
     // Fetch Google JWK public keys (JWK format — directly importable by Web Crypto)
     const keysRes = await fetch(
       'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com',
-      { cf: { cacheEverything: true, cacheTtl: 3600 } } as RequestInit,
+      { cf: { cacheEverything: true, cacheTtl: 3600 }, signal: AbortSignal.timeout(5000) } as RequestInit,
     )
     if (!keysRes.ok) return null
     const jwks = await keysRes.json() as JWKS

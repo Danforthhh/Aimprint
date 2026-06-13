@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { auth } from './services/firebase'
 import {
@@ -91,8 +91,11 @@ export default function App() {
     })
   }, [])
 
+  const loadGenRef = useRef(0)
+
   const loadData = useCallback(async () => {
     if (!user) return
+    const gen = ++loadGenRef.current
     setLoading(true)
     setError('')
     const viewAs = viewAsUser?.user_id
@@ -109,6 +112,7 @@ export default function App() {
         fetchFilters(viewAs),
         fetchCategoryTrend(filters, viewAs),
       ])
+      if (gen !== loadGenRef.current) return  // filter changed while fetching — discard stale results
       setDaily(usage.daily)
       setCategoryTrend(trend.data)
       setTotals(usage.totals ?? EMPTY_TOTALS)
@@ -125,9 +129,10 @@ export default function App() {
       setTopSessions(top.sessions)
       setFiltersData(fdata)
     } catch (e) {
+      if (gen !== loadGenRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load data')
     } finally {
-      setLoading(false)
+      if (gen === loadGenRef.current) setLoading(false)
     }
   }, [user, filters, viewAsUser])
 
@@ -200,7 +205,7 @@ export default function App() {
           filters={filters}
           filtersData={filtersData}
           onChange={setFilters}
-          onExport={() => downloadCsv(filters, viewAsUser?.user_id).catch(console.error)}
+          onExport={() => downloadCsv(filters, viewAsUser?.user_id).catch(e => setError(e instanceof Error ? e.message : 'CSV export failed'))}
           onRefresh={loadData}
           loading={loading}
           isAdmin={user?.email === ADMIN_EMAIL}

@@ -21,7 +21,7 @@ export default function SettingsModal({ onClose }: Props) {
   const user = auth.currentUser
 
   useEffect(() => {
-    listSyncTokens().then(r => setTokens(r.tokens)).catch(() => {})
+    listSyncTokens().then(r => setTokens(r.tokens)).catch(e => setError(e instanceof Error ? e.message : 'Failed to load tokens'))
   }, [])
 
   async function generate() {
