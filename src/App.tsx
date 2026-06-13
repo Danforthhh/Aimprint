@@ -30,7 +30,7 @@ import TopSessionsCard    from './components/TopSessionsCard'
 import SessionTable       from './components/SessionTable'
 
 const EMPTY_TOTALS: Totals = { input: 0, output: 0, cache_read: 0, cache_creation: 0, cost_usd: 0, requests: 0, sessions: 0 }
-const ADMIN_EMAIL = 'vin.bories@gmail.com'
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string | undefined
 
 interface AdminUser { user_id: string; email: string }
 
