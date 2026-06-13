@@ -409,8 +409,8 @@ export async function queryAgentCalls(
 ): Promise<{ agent_calls: number; sessions_with_agents: number }> {
   const { clause, bindings } = buildWhere(f)
   const row = await db.prepare(
-    `SELECT COALESCE(SUM(CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER)), 0) AS agent_calls,
-            COUNT(CASE WHEN CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
+    `SELECT COALESCE(SUM(CAST(json_extract(tool_summary, '$.agent') AS INTEGER)), 0) AS agent_calls,
+            COUNT(CASE WHEN CAST(json_extract(tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
      FROM (
        SELECT DISTINCT tu.session_id, sm.tool_summary
        FROM token_usage tu
