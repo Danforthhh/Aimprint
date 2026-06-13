@@ -237,10 +237,10 @@ function buildWhere(f: UsageFilters): { clause: string; bindings: unknown[] } {
   if (f.machine && f.machine !== 'all') { conditions.push('tu.machine = ?'); bindings.push(f.machine) }
   if (f.ticket  && f.ticket  !== 'all') { conditions.push('tu.ticket = ?');  bindings.push(f.ticket) }
   if (f.category && f.category !== 'all') {
-    // Note: category filter uses session-level classification (sm.category), not per-request
-    // (tu.request_category). This is intentional for /api/usage and /api/sessions — filtering
-    // by session type. The category chart itself uses queryRequestCategories for accuracy.
-    conditions.push('sm.category = ?')
+    // Use COALESCE so sessions without a session_meta row (category IS NULL) are treated as
+    // 'other' — consistent with querySessions — rather than being silently dropped by the
+    // LEFT JOIN becoming an effective INNER JOIN.
+    conditions.push("COALESCE(sm.category, 'other') = ?")
     bindings.push(f.category)
   }
 
