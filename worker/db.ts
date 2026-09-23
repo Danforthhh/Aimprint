@@ -150,9 +150,61 @@ export async function insertTokenRecords(
   for (let i = 0; i < stmts.length; i += CHUNK) {
     const chunk = stmts.slice(i, i + CHUNK)
     const results = await db.batch(chunk)
-    inserted += results.filter(r => r.meta['changes'] as number > 0).length
+    const fresh = records.slice(i, i + CHUNK).filter((_, j) => results[j].meta['changes'] as number > 0)
+    inserted += fresh.length
+    // ponytail: raw insert and rollup upsert are two batches; a crash between them drops the delta — repair via the INSERT..SELECT in migration 006.
+    if (fresh.length > 0) await db.batch(rollupUpserts(db, userId, fresh))
   }
   return { inserted, skipped: records.length - inserted }
+}
+
+/** Aggregates newly inserted records by rollup key and returns one upsert per key (≤ records.length). */
+function rollupUpserts(db: D1Database, userId: string, records: TokenRecord[]): D1PreparedStatement[] {
+  const groups = new Map<string, {
+    r: TokenRecord; gitBranch?: string; ticket?: string; last: string; requests: number
+    input: number; output: number; cacheRead: number; cacheCreation: number; cost: number
+  }>()
+  for (const r of records) {
+    const key = JSON.stringify([r.session_id, r.date, r.model, r.is_sidechain, r.request_category ?? ''])
+    let g = groups.get(key)
+    if (!g) {
+      g = { r, last: r.timestamp, requests: 0, input: 0, output: 0, cacheRead: 0, cacheCreation: 0, cost: 0 }
+      groups.set(key, g)
+    }
+    g.requests      += 1
+    g.input         += r.input_tokens
+    g.output        += r.output_tokens
+    g.cacheRead     += r.cache_read
+    g.cacheCreation += r.cache_creation
+    g.cost          += r.cost_usd
+    g.gitBranch     ??= r.git_branch
+    g.ticket        ??= r.ticket
+    if (r.timestamp > g.last) g.last = r.timestamp
+  }
+
+  return [...groups.values()].map(g =>
+    db.prepare(
+      `INSERT INTO usage_rollup
+        (user_id, session_id, date, model, is_sidechain, request_category,
+         machine, project, git_branch, ticket, last_timestamp,
+         requests, input_tokens, output_tokens, cache_read, cache_creation, cost_usd)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT (user_id, session_id, date, model, is_sidechain, request_category) DO UPDATE SET
+         requests       = requests + excluded.requests,
+         input_tokens   = input_tokens + excluded.input_tokens,
+         output_tokens  = output_tokens + excluded.output_tokens,
+         cache_read     = cache_read + excluded.cache_read,
+         cache_creation = cache_creation + excluded.cache_creation,
+         cost_usd       = cost_usd + excluded.cost_usd,
+         last_timestamp = MAX(last_timestamp, excluded.last_timestamp),
+         git_branch     = COALESCE(usage_rollup.git_branch, excluded.git_branch),
+         ticket         = COALESCE(usage_rollup.ticket, excluded.ticket)`
+    ).bind(
+      userId, g.r.session_id, g.r.date, g.r.model, g.r.is_sidechain, g.r.request_category ?? '',
+      g.r.machine, g.r.project, g.gitBranch ?? null, g.ticket ?? null, g.last,
+      g.requests, g.input, g.output, g.cacheRead, g.cacheCreation, g.cost,
+    )
+  )
 }
 
 // ─── Session meta ─────────────────────────────────────────────────────────────
@@ -266,7 +318,7 @@ export async function queryDailyUsage(db: D1Database, f: UsageFilters) {
             SUM(tu.cache_read)     AS cache_read,
             SUM(tu.cache_creation) AS cache_creation,
             SUM(tu.cost_usd)       AS cost_usd
-     FROM token_usage tu ${join}
+     FROM usage_rollup tu ${join}
      WHERE ${clause}
      GROUP BY tu.date
      ORDER BY tu.date ASC`
@@ -283,9 +335,9 @@ export async function queryTotals(db: D1Database, f: UsageFilters) {
             SUM(tu.cache_read)     AS cache_read,
             SUM(tu.cache_creation) AS cache_creation,
             SUM(tu.cost_usd)       AS cost_usd,
-            COUNT(DISTINCT tu.request_id) AS requests,
+            SUM(tu.requests) AS requests,
             COUNT(DISTINCT tu.session_id) AS sessions
-     FROM token_usage tu ${join}
+     FROM usage_rollup tu ${join}
      WHERE ${clause}`
   ).bind(...bindings).first()
   return row
@@ -302,11 +354,11 @@ export async function queryRequestCategories(db: D1Database, f: UsageFilters) {
   const { clause, bindings } = buildWhere(f)
   const result = await db.prepare(
     `SELECT COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other') AS category,
-            COUNT(*) AS requests,
+            SUM(tu.requests) AS requests,
             COUNT(DISTINCT tu.session_id) AS sessions,
             SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
             SUM(tu.cost_usd) AS cost_usd
-     FROM token_usage tu
+     FROM usage_rollup tu
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
      WHERE ${clause}
      GROUP BY COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other')
@@ -322,7 +374,7 @@ export async function querySubagent(db: D1Database, f: UsageFilters) {
             COUNT(DISTINCT tu.session_id)  AS sessions,
             SUM(tu.input_tokens + tu.output_tokens + tu.cache_creation) AS tokens,
             SUM(tu.cost_usd) AS cost_usd
-     FROM token_usage tu
+     FROM usage_rollup tu
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
      WHERE ${clause}
      GROUP BY tu.is_sidechain`
@@ -346,7 +398,7 @@ export async function queryByDimension(db: D1Database, f: UsageFilters, dim: 'pr
             COUNT(DISTINCT tu.session_id) AS sessions,
             SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
             SUM(tu.cost_usd) AS cost_usd
-     FROM token_usage tu
+     FROM usage_rollup tu
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
      WHERE ${clause} AND ${col} IS NOT NULL AND ${col} != ''
      GROUP BY ${col}
@@ -366,7 +418,7 @@ export async function querySessions(
   const { clause, bindings } = buildWhere(f)
   const orderBy = sort === 'cost_desc'
     ? 'ORDER BY SUM(tu.cost_usd) DESC'
-    : 'ORDER BY MAX(tu.timestamp) DESC'
+    : 'ORDER BY MAX(tu.last_timestamp) DESC'
   const result = await db.prepare(
     `SELECT tu.session_id,
             MIN(tu.machine)    AS machine,
@@ -379,7 +431,7 @@ export async function querySessions(
             COALESCE(sm.category_source, 'auto')  AS category_source,
             SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS tokens,
             SUM(tu.cost_usd) AS cost_usd
-     FROM token_usage tu
+     FROM usage_rollup tu
      LEFT JOIN session_meta sm ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
      WHERE ${clause}
      GROUP BY tu.session_id
@@ -399,7 +451,7 @@ export async function queryDailyAgentCalls(
      FROM (
        SELECT MIN(tu.date) AS date,
               CAST(json_extract(sm.tool_summary, '$.agent') AS INTEGER) AS agent_count
-       FROM token_usage tu
+       FROM usage_rollup tu
        LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
        WHERE ${clause}
        GROUP BY tu.session_id
@@ -422,7 +474,7 @@ export async function queryAgentCalls(
             COUNT(CASE WHEN CAST(json_extract(tool_summary, '$.agent') AS INTEGER) > 0 THEN 1 END) AS sessions_with_agents
      FROM (
        SELECT tu.session_id, MAX(sm.tool_summary) AS tool_summary
-       FROM token_usage tu
+       FROM usage_rollup tu
        LEFT JOIN session_meta sm ON sm.session_id = tu.session_id AND sm.user_id = tu.user_id
        WHERE ${clause}
        GROUP BY tu.session_id
@@ -438,14 +490,14 @@ export async function queryDistinct(db: D1Database, userId: string, col: 'projec
   const safeCol = SAFE_DISTINCT_COLS[col]
   if (!safeCol) return []
   const result = await db.prepare(
-    `SELECT DISTINCT ${safeCol} AS val FROM token_usage WHERE user_id = ? AND ${safeCol} IS NOT NULL AND ${safeCol} != '' ORDER BY ${safeCol} LIMIT 500`
+    `SELECT DISTINCT ${safeCol} AS val FROM usage_rollup WHERE user_id = ? AND ${safeCol} IS NOT NULL AND ${safeCol} != '' ORDER BY ${safeCol} LIMIT 500`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
 }
 
 export async function queryTickets(db: D1Database, userId: string) {
   const result = await db.prepare(
-    `SELECT DISTINCT ticket AS val FROM token_usage WHERE user_id = ? AND ticket IS NOT NULL ORDER BY ticket LIMIT 500`
+    `SELECT DISTINCT ticket AS val FROM usage_rollup WHERE user_id = ? AND ticket IS NOT NULL ORDER BY ticket LIMIT 500`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
 }
@@ -461,7 +513,7 @@ export async function queryCategoryTrend(
       COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other')    AS category,
       CAST(SUM(tu.input_tokens + tu.output_tokens + tu.cache_read + tu.cache_creation) AS INTEGER) AS tokens,
       SUM(tu.cost_usd)                                                    AS cost_usd
-    FROM token_usage tu
+    FROM usage_rollup tu
     LEFT JOIN session_meta sm
       ON tu.session_id = sm.session_id AND tu.user_id = sm.user_id
     WHERE ${clause}
@@ -484,12 +536,13 @@ export async function listAllUsers(db: D1Database) {
 // ─── Account deletion ─────────────────────────────────────────────────────────
 
 /**
- * Permanently deletes all data for a user: token_usage, session_meta, sync_tokens, and the
+ * Permanently deletes all data for a user: token_usage, usage_rollup, session_meta, sync_tokens, and the
  * users row. Runs as a D1 batch so all deletes are applied atomically.
  */
 export async function deleteUserAccount(db: D1Database, userId: string): Promise<void> {
   await db.batch([
     db.prepare('DELETE FROM token_usage  WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM usage_rollup WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM session_meta WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM sync_tokens  WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM users        WHERE user_id = ?').bind(userId),

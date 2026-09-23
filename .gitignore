@@ -7,3 +7,4 @@ sync/.env
 .wrangler/
 graphify-out/
 *.tsbuildinfo
+worker/reprice.sql

@@ -1,8 +1,12 @@
 const MODELS = [
-  { name: 'Claude Fable 5',  model: 'claude-fable-5',    input: 10.00, output: 50.00, cacheRead: 1.00, cacheWrite: 12.50 },
-  { name: 'Claude Opus 4.8', model: 'claude-opus-4-8',   input:  5.00, output: 25.00, cacheRead: 0.50, cacheWrite:  6.25 },
-  { name: 'Claude Sonnet',   model: 'claude-sonnet-4-6', input:  3.00, output: 15.00, cacheRead: 0.30, cacheWrite:  3.75 },
-  { name: 'Claude Haiku',    model: 'claude-haiku-4-5',  input:  1.00, output:  5.00, cacheRead: 0.10, cacheWrite:  1.25 },
+  { name: 'Claude Fable 5.1',  model: 'claude-fable-5-1',  input: 10.00, output: 50.00, cacheRead: 0.25, cacheWrite: 12.50 },
+  { name: 'Claude Fable 5',    model: 'claude-fable-5',    input: 10.00, output: 50.00, cacheRead: 1.00, cacheWrite: 12.50 },
+  { name: 'Claude Opus 5.5',   model: 'claude-opus-5-5',   input:  4.00, output: 20.00, cacheRead: 0.20, cacheWrite:  5.00 },
+  { name: 'Claude Opus 5',     model: 'claude-opus-5',     input:  5.00, output: 25.00, cacheRead: 0.50, cacheWrite:  6.25 },
+  { name: 'Claude Opus 4.8',   model: 'claude-opus-4-8',   input:  5.00, output: 25.00, cacheRead: 0.50, cacheWrite:  6.25 },
+  { name: 'Claude Sonnet 5',   model: 'claude-sonnet-5',   input:  2.00, output: 10.00, cacheRead: 0.20, cacheWrite:  2.50 },
+  { name: 'Claude Sonnet 4.6', model: 'claude-sonnet-4-6', input:  3.00, output: 15.00, cacheRead: 0.30, cacheWrite:  3.75 },
+  { name: 'Claude Haiku 4.5',  model: 'claude-haiku-4-5',  input:  1.00, output:  5.00, cacheRead: 0.10, cacheWrite:  1.25 },
 ]
 
 const COLS = ['Model', 'Input /1M', 'Output /1M', 'Cache read /1M', 'Cache write /1M']
@@ -47,7 +51,7 @@ export default function PricingReferenceCard() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-700 mt-3">Cache read is billed at ~10% of input — most of your token volume is cache reads from the system prompt.</p>
+      <p className="text-xs text-gray-700 mt-3">Cache read is billed at 2.5–10% of input — most of your token volume is cache reads from the system prompt.</p>
     </div>
   )
 }
