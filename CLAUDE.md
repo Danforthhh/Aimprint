@@ -59,6 +59,24 @@ npm run worker:deploy  # → tsc check + code review + doc-updater, then deploys
 
 > `npm run deploy` (gh-pages direct) is kept for one-off deploys without a push, but **push to main is the canonical path** — GitHub Actions handles the build with proper secrets.
 
+## D1 read quota, usage_rollup, and pricing — 2026-09-23
+**Context:** Production D1 hit the free-tier daily read limit: 9.67M rows read in 24h over 816 queries (~12k rows/query), because every dashboard aggregation scanned raw per-request `token_usage` rows. Separately, Fable 5.1, Opus 5.5, Opus 5 and Sonnet 5 were missing from `pricing.ts` and dated/`[1m]` model ids were not normalized, so older rows for those models were underpriced at the Sonnet default rates.
+**Options considered:**
+- Upgrade to D1 paid plan: fixes the symptom, not the full-table scans
+- Cache dashboard responses: stale data and reads still spike on cache misses
+- Pre-aggregated rollup table: few rows per session/day, exact filters if every filterable dimension is in the key
+**Chosen:** `usage_rollup` table (migration 006, backfilled from `token_usage`), all dashboard queries in `db.ts` read it, and `/ingest` pairs each raw insert with its rollup upsert in one `db.batch` (atomic). Pricing adds the four models plus `normalizeModel()`; `npm run reprice` generates `worker/reprice.sql` to recompute rollup costs.
+
+**Post-reset runbook** (order matters: deploy first, because ingest is atomic and `/ingest` fails whole until the table exists):
+```bash
+npm run worker:deploy
+npm run worker:migrate -- --remote
+npm run reprice && npx wrangler d1 execute aimprint-db --remote --config worker/wrangler.toml --file worker/reprice.sql
+npx wrangler d1 info aimprint-db --config worker/wrangler.toml   # next day: rows_read_24h should be well under 1M
+```
+- The dashboard returns 500/503 between step 1 and step 2 (a few minutes).
+- If the rollup is ever rebuilt (see the comment in `006_usage_rollup.sql`), re-run the reprice step afterwards: the backfill copies `token_usage.cost_usd`, which reprice does not touch.
+
 ## Security & correctness hardening — 2026-06-13
 **Context:** Audit of `worker/routes.ts`, `worker/db.ts`, and `sync/index.ts` surfaced a batch of low-severity but real issues: a TOCTOU race on token deletion, raw column interpolation in a D1 query, an unbounded `clampDays(0)` edge case, a `viewAs` impersonation bypass on admin writes, and timestamp comparisons that could silently misbehave across UTC/offset formats.
 **Options considered:** Fix individually inline vs. consolidate in one guarded commit to keep the surface area auditable.
