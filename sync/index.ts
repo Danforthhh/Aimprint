@@ -463,13 +463,14 @@ async function main() {
     })
   }
 
-  // Post records in batches — always include full sessionMetas (upsert is idempotent)
+  // Post records in batches. sessionMetas go with the last batch only: the Worker adds tool_summary
+  // counts on upsert (they are deltas since the cursor), so sending them with every batch multiplied them.
   const records = Array.from(allRecords.values())
   const totalBatches = Math.ceil(records.length / BATCH_SIZE)
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const batch = records.slice(i, i + BATCH_SIZE)
     console.log(`Posting batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}...`)
-    await postBatch(batch, sessionMetas)
+    await postBatch(batch, i + BATCH_SIZE >= records.length ? sessionMetas : [])
   }
 
   saveCursors(cursors)
