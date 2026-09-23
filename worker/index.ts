@@ -118,8 +118,21 @@ export default {
       for (const [k, v] of Object.entries(cors)) newHeaders.set(k, v)
       return new Response(response.body, { status: response.status, headers: newHeaders })
     } catch (e) {
-      console.error('Unhandled Worker error:', e)
-      return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      const ref = crypto.randomUUID().slice(0, 8)
+      console.error(`[${ref}]`, e)
+      // Exact D1 quota error text could not be captured (remote query succeeded on 2026-09-23),
+      // so match generically. Bare "limit" is left out so SQL errors mentioning LIMIT stay 500s.
+      if (e instanceof Error && /quota|exceed/i.test(e.message)) {
+        return new Response(JSON.stringify({
+          error: 'Database read quota exceeded (Cloudflare D1 free tier). Resets daily at 00:00 UTC.',
+          code: 'd1_quota',
+          ref,
+        }), {
+          status: 503,
+          headers: { ...corsHeaders(origin), 'Content-Type': 'application/json', 'Retry-After': '3600' },
+        })
+      }
+      return new Response(JSON.stringify({ error: 'Internal server error', code: 'internal', ref }), {
         status: 500,
         headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
       })

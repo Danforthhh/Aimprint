@@ -29,6 +29,11 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const text = await res.text()
+    let body: { error?: unknown; ref?: unknown } = {}
+    try { body = JSON.parse(text) ?? {} } catch { /* not JSON */ }
+    if (typeof body.error === 'string') {
+      throw new Error(body.error + (body.ref ? ` (ref ${body.ref})` : ''))
+    }
     throw new Error(`API ${res.status}: ${text}`)
   }
   return res.json() as Promise<T>
