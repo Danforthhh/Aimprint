@@ -126,7 +126,10 @@ export async function insertTokenRecords(
 ): Promise<{ inserted: number; skipped: number }> {
   if (records.length === 0) return { inserted: 0, skipped: 0 }
 
-  const stmts = records.map(r =>
+  // Each raw INSERT OR IGNORE is immediately followed by a rollup upsert gated on changes() — it only
+  // applies when that raw row was new. Both run in the same db.batch (one D1 transaction), so a failed or
+  // retried ingest can never leave token_usage and usage_rollup out of step.
+  const stmts = records.flatMap(r => [
     db.prepare(
       `INSERT OR IGNORE INTO token_usage
         (request_id, user_id, session_id, timestamp, date, machine, project, cwd,
@@ -141,70 +144,36 @@ export async function insertTokenRecords(
       r.input_tokens, r.output_tokens, r.cache_read, r.cache_creation,
       r.is_sidechain, r.cost_usd,
       r.request_category ?? '',
-    )
-  )
-
-  // D1 batch limit is 1000 statements — chunk to stay well under it
-  const CHUNK = 500
-  let inserted = 0
-  for (let i = 0; i < stmts.length; i += CHUNK) {
-    const chunk = stmts.slice(i, i + CHUNK)
-    const results = await db.batch(chunk)
-    const fresh = records.slice(i, i + CHUNK).filter((_, j) => results[j].meta['changes'] as number > 0)
-    inserted += fresh.length
-    // ponytail: raw insert and rollup upsert are two batches; a crash between them drops the delta — repair via the INSERT..SELECT in migration 006.
-    if (fresh.length > 0) await db.batch(rollupUpserts(db, userId, fresh))
-  }
-  return { inserted, skipped: records.length - inserted }
-}
-
-/** Aggregates newly inserted records by rollup key and returns one upsert per key (≤ records.length). */
-function rollupUpserts(db: D1Database, userId: string, records: TokenRecord[]): D1PreparedStatement[] {
-  const groups = new Map<string, {
-    r: TokenRecord; gitBranch?: string; ticket?: string; last: string; requests: number
-    input: number; output: number; cacheRead: number; cacheCreation: number; cost: number
-  }>()
-  for (const r of records) {
-    const key = JSON.stringify([r.session_id, r.date, r.model, r.is_sidechain, r.request_category ?? ''])
-    let g = groups.get(key)
-    if (!g) {
-      g = { r, last: r.timestamp, requests: 0, input: 0, output: 0, cacheRead: 0, cacheCreation: 0, cost: 0 }
-      groups.set(key, g)
-    }
-    g.requests      += 1
-    g.input         += r.input_tokens
-    g.output        += r.output_tokens
-    g.cacheRead     += r.cache_read
-    g.cacheCreation += r.cache_creation
-    g.cost          += r.cost_usd
-    g.gitBranch     ??= r.git_branch
-    g.ticket        ??= r.ticket
-    if (r.timestamp > g.last) g.last = r.timestamp
-  }
-
-  return [...groups.values()].map(g =>
+    ),
     db.prepare(
       `INSERT INTO usage_rollup
-        (user_id, session_id, date, model, is_sidechain, request_category,
-         machine, project, git_branch, ticket, last_timestamp,
-         requests, input_tokens, output_tokens, cache_read, cache_creation, cost_usd)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-       ON CONFLICT (user_id, session_id, date, model, is_sidechain, request_category) DO UPDATE SET
-         requests       = requests + excluded.requests,
+        (user_id, session_id, date, model, is_sidechain, request_category, machine, project, ticket,
+         git_branch, last_timestamp, requests, input_tokens, output_tokens, cache_read, cache_creation, cost_usd)
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,? WHERE changes() > 0
+       ON CONFLICT (user_id, session_id, date, model, is_sidechain, request_category, machine, project, ticket) DO UPDATE SET
+         requests       = requests + 1,
          input_tokens   = input_tokens + excluded.input_tokens,
          output_tokens  = output_tokens + excluded.output_tokens,
          cache_read     = cache_read + excluded.cache_read,
          cache_creation = cache_creation + excluded.cache_creation,
          cost_usd       = cost_usd + excluded.cost_usd,
          last_timestamp = MAX(last_timestamp, excluded.last_timestamp),
-         git_branch     = COALESCE(usage_rollup.git_branch, excluded.git_branch),
-         ticket         = COALESCE(usage_rollup.ticket, excluded.ticket)`
+         git_branch     = COALESCE(usage_rollup.git_branch, excluded.git_branch)`
     ).bind(
-      userId, g.r.session_id, g.r.date, g.r.model, g.r.is_sidechain, g.r.request_category ?? '',
-      g.r.machine, g.r.project, g.gitBranch ?? null, g.ticket ?? null, g.last,
-      g.requests, g.input, g.output, g.cacheRead, g.cacheCreation, g.cost,
-    )
-  )
+      userId, r.session_id, r.date, r.model, r.is_sidechain, r.request_category ?? '',
+      r.machine, r.project, r.ticket ?? '', r.git_branch ?? null, r.timestamp,
+      r.input_tokens, r.output_tokens, r.cache_read, r.cache_creation, r.cost_usd,
+    ),
+  ])
+
+  // D1 batch limit is 1000 statements — chunk to stay well under it (even size keeps insert/upsert pairs together)
+  const CHUNK = 500
+  let inserted = 0
+  for (let i = 0; i < stmts.length; i += CHUNK) {
+    const results = await db.batch(stmts.slice(i, i + CHUNK))
+    inserted += results.filter((r, j) => j % 2 === 0 && (r.meta['changes'] as number) > 0).length
+  }
+  return { inserted, skipped: records.length - inserted }
 }
 
 // ─── Session meta ─────────────────────────────────────────────────────────────
@@ -425,7 +394,7 @@ export async function querySessions(
             MIN(tu.project)    AS project,
             MAX(tu.model)      AS model,
             MIN(tu.git_branch) AS git_branch,
-            MIN(tu.ticket)     AS ticket,
+            MIN(NULLIF(tu.ticket, '')) AS ticket,
             MIN(tu.date)       AS date,
             COALESCE(sm.category, 'other')        AS category,
             COALESCE(sm.category_source, 'auto')  AS category_source,
@@ -497,7 +466,7 @@ export async function queryDistinct(db: D1Database, userId: string, col: 'projec
 
 export async function queryTickets(db: D1Database, userId: string) {
   const result = await db.prepare(
-    `SELECT DISTINCT ticket AS val FROM usage_rollup WHERE user_id = ? AND ticket IS NOT NULL ORDER BY ticket LIMIT 500`
+    `SELECT DISTINCT ticket AS val FROM usage_rollup WHERE user_id = ? AND ticket != '' ORDER BY ticket LIMIT 500`
   ).bind(userId).all<{ val: string }>()
   return result.results.map(r => r.val)
 }
