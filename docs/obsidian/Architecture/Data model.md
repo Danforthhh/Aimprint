@@ -50,6 +50,21 @@ COALESCE(NULLIF(tu.request_category, ''), sm.category, 'other')
 ```
 See [[Classification]] for full details.
 
+Since 2026-09 `token_usage` is **write-only**: `/ingest` inserts into it (dedup via the `(request_id, user_id)` primary key) and account deletion clears it. No dashboard query reads it, and its secondary indexes were dropped (migration 007) because D1 bills every index entry as a row written. `cost_usd` here is the price at ingest time and is not repriced.
+
+### `usage_rollup`
+Pre-aggregated copy of `token_usage` that every dashboard query reads (migration 006). One row per `(user_id, session_id, date, model, is_sidechain, request_category, machine, project, ticket)` — every filterable dimension is in the key, so filters and breakdowns stay exact while rows read per query drop 10–30×.
+```
+user_id, session_id, date, model, is_sidechain, request_category,
+machine, project, ticket           — composite PRIMARY KEY (ticket is '' when absent)
+git_branch        TEXT
+last_timestamp    TEXT      — MAX(timestamp) of the group; sessions list sorts on it
+requests          INTEGER   — COUNT of raw rows in the group
+input_tokens, output_tokens, cache_read, cache_creation  INTEGER — SUMs
+cost_usd          REAL      — SUM; recompute with `npm run reprice` after a pricing change
+```
+`/ingest` pairs each raw `INSERT OR IGNORE` with an `ON CONFLICT DO UPDATE ... + excluded` upsert in the same D1 batch, gated on `changes() > 0`, so retries never double count. To rebuild from raw: `DELETE FROM usage_rollup`, re-run the INSERT..SELECT in `006_usage_rollup.sql`, then reprice.
+
 ### `session_meta`
 One row per session. Category and first message.
 ```

@@ -17,8 +17,12 @@ Update `worker/wrangler.toml` with the `database_id`.
 
 ## 2. Run migrations
 ```bash
-npm run worker:migrate         # production
-npm run worker:migrate:local   # local dev
+npm run worker:migrate -- --remote   # production (wrangler 4 defaults to local without --remote)
+npm run worker:migrate:local         # local dev
+```
+After any change to `worker/pricing.ts`, recompute stored costs:
+```bash
+npm run reprice && npx wrangler d1 execute aimprint-db --remote --config worker/wrangler.toml --file worker/reprice.sql
 ```
 
 ## 3. Set Worker secrets

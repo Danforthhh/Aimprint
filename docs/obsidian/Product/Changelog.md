@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.0 — 2026-09
+
+### D1 free-tier quota fix + pricing refresh
+
+- **`usage_rollup` table** (migration 006): dashboard queries read a pre-aggregated table instead of scanning raw `token_usage` rows. Production had hit the 5M rows-read/day limit (9.67M in 24h, ~12k rows per query); after the change a full day reads under 10k rows
+- **Atomic ingest**: each raw insert and its rollup upsert run in the same D1 batch, gated on `changes() > 0`, so sync retries never double count
+- **Dropped 9 unused `token_usage` indexes** (migration 007): D1 bills index entries as rows written; cuts writes per synced record from ~14 to ~5 against the 100k/day limit
+- **Pricing**: added Claude Fable 5.1, Opus 5.5, Opus 5, Sonnet 5; date-suffixed and `[1m]` model ids now normalize before lookup. Rows for those models had been priced at Sonnet default rates; `npm run reprice` recomputed rollup costs (+$2.3k on the total)
+- **Errors say why**: Worker returns `{error, code, ref}`; D1 quota exhaustion is a 503 with a plain message, other failures a 500 with a log ref. Frontend banner shows the message
+- **Sync**: session metadata sent once per run instead of once per 100-record batch, which had multiplied `tool_summary` agent-call counts (historic values remain inflated until a full re-sync)
+
 ## v1.4.1 — 2026-06
 
 ### Assessment follow-up fixes

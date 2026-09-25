@@ -7,7 +7,7 @@ graph TD
     A["~/.claude/projects/*.jsonl"] --> B["Sync agent (sync/index.ts)"]
     B --> C["POST /ingest (X-Sync-Token)"]
     C --> D["Cloudflare Worker (worker/index.ts)"]
-    D --> E["D1 SQLite (token_usage, session_meta)"]
+    D --> E["D1 SQLite (token_usage → usage_rollup, session_meta)"]
     F["React dashboard (GitHub Pages)"] --> G["GET /api/* (Firebase ID token)"]
     G --> D
     H["Firebase Auth"] --> F
@@ -26,8 +26,8 @@ Stateless HTTP handler. Two auth paths:
 All queries filter by `user_id` for data isolation.
 
 ### D1 database
-Four tables: `users`, `sync_tokens`, `token_usage`, `session_meta`.
-See [[Data model]] for schema.
+Five tables: `users`, `sync_tokens`, `token_usage` (raw, write-only), `usage_rollup` (pre-aggregated, all dashboard reads), `session_meta`.
+See [[Data model]] for schema. Free tier limits that matter: 5M rows read/day, 100k rows written/day (index entries count as writes).
 
 ### React dashboard (`src/`)
 Single-page app. Firebase Auth for login. Fetches from Worker on filter change. All charts via Recharts.
